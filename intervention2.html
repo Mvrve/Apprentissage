@@ -145,12 +145,14 @@
   .ajout-form[hidden] { display:none; }
   .ajout-field { display:flex; flex-direction:column; gap:2px; font-size:.65rem; color:#4a2f14; }
   .ajout-field input, .ajout-field select { width:100%; min-width:0; border:1px solid #c9b9a8; border-radius:7px; padding:5px 6px; font:inherit; font-size:.72rem; background:#fff; }
+  .ajout-name { grid-column:span 2; }
+  .plat-reconnu { grid-column:span 2; align-self:center; font-size:.7rem; color:#2a4d7a; background:#eef6ff; border-radius:7px; padding:7px; min-height:30px; }
   .ajout-actions { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
   .ajout-actions button { border:0; border-radius:7px; padding:6px 9px; cursor:pointer; font:inherit; font-size:.7rem; font-weight:700; }
   .ajout-save { background:#2a4d7a; color:#fff; }
   .ajout-cancel { background:#e5e5e5; color:#333; }
   .ajout-kcal { grid-column:span 2; font-size:.68rem; color:#2a4d7a; font-weight:600; }
-  @media (max-width:950px) { .ajout-form { grid-template-columns:repeat(2, minmax(110px, 1fr)); } .ajout-kcal { grid-column:span 2; } }
+  @media (max-width:950px) { .ajout-form { grid-template-columns:repeat(2, minmax(110px, 1fr)); } .ajout-name, .plat-reconnu { grid-column:span 2; } .ajout-kcal { grid-column:span 2; } }
 </style>
 </head>
 <body>
@@ -261,14 +263,12 @@
     </div>
 
     <form id="ajoutForm" class="ajout-form" hidden>
-      <label class="ajout-field">Nom du plat ou aliment<input id="nouveauNom" required maxlength="60" placeholder="Ex. Gratin de légumes"></label>
-      <label class="ajout-field">Catégorie<select id="nouvelleCategorie"><option value="plats">🍽️ Plats composés</option><option value="legumes">🥕 Légumes</option><option value="feculents">🍚 Féculents</option><option value="proteines">🍗 Protéines</option><option value="desserts">🍰 Desserts</option><option value="boissons">🥤 Boissons</option></select></label>
-      <label class="ajout-field">Portion<input id="nouvellePortion" required maxlength="40" placeholder="1 assiette"></label>
-      <label class="ajout-field">Protéines (g)<input id="nouveauP" type="number" min="0" max="500" step="0.1" value="0" required></label>
-      <label class="ajout-field">Lipides (g)<input id="nouveauL" type="number" min="0" max="500" step="0.1" value="0" required></label>
-      <label class="ajout-field">Glucides (g)<input id="nouveauG" type="number" min="0" max="1000" step="0.1" value="0" required></label>
-      <div class="ajout-kcal" id="nouveauKcal">Calories calculées : 0 kcal</div>
-      <div class="ajout-actions"><button class="ajout-save" type="submit">Ajouter au catalogue</button><button class="ajout-cancel" id="fermerAjout" type="button">Annuler</button></div>
+      <label class="ajout-field ajout-name">Nom du plat ou aliment
+        <input id="nouveauNom" list="platsDisponibles" required maxlength="60" placeholder="Ex. Poulet et riz" autocomplete="off">
+        <datalist id="platsDisponibles"></datalist>
+      </label>
+      <div id="platReconnu" class="plat-reconnu">Choisis un plat de la base pour remplir automatiquement ses informations.</div>
+      <div class="ajout-actions"><button id="ajouterReconnu" class="ajout-save" type="submit" disabled>Ajouter au plateau</button><button class="ajout-cancel" id="fermerAjout" type="button">Annuler</button></div>
     </form>
     <div class="cats" id="cats"></div>
   </section>
@@ -504,47 +504,59 @@ function choisirSexe(s) {
 }
 
 
-function valeurNumerique(id) {
-  const valeur = Number($(id).value);
-  return Number.isFinite(valeur) && valeur >= 0 ? valeur : null;
+function normaliserTexte(texte) {
+  return texte.toLocaleLowerCase("fr-FR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
-function actualiserKcalNouveau() {
-  const p = valeurNumerique("nouveauP") || 0;
-  const l = valeurNumerique("nouveauL") || 0;
-  const g = valeurNumerique("nouveauG") || 0;
-  $("nouveauKcal").textContent = `Calories calculées : ${Math.round(4 * p + 9 * l + 4 * g)} kcal`;
+function trouverPlat(nom) {
+  const recherchePlat = normaliserTexte(nom);
+  for (const categorie in MENU) {
+    const item = MENU[categorie].items.find(element => normaliserTexte(element.nom) === recherchePlat);
+    if (item) return { item, categorie };
+  }
+  return null;
+}
+
+function construireListePlats() {
+  const liste = $("platsDisponibles");
+  liste.innerHTML = Object.values(MENU).flatMap(cat => cat.items)
+    .map(item => `<option value="${item.nom}"></option>`).join("");
+}
+
+function actualiserPlatReconnu() {
+  const resultat = trouverPlat($("nouveauNom").value);
+  const bouton = $("ajouterReconnu");
+  bouton.disabled = !resultat;
+  if (!resultat) {
+    $("platReconnu").textContent = "Choisis un plat de la base pour remplir automatiquement ses informations.";
+    return;
+  }
+  const item = resultat.item;
+  $("platReconnu").textContent = `${item.portion} · ${Math.round(kcalDe(item))} kcal · Protéines ${fmt(item.p)} g · Lipides ${fmt(item.l)} g · Glucides ${fmt(item.g)} g`;
 }
 
 function ajouterNouveauPlat(event) {
   event.preventDefault();
-  const nom = $("nouveauNom").value.trim();
-  const portion = $("nouvellePortion").value.trim();
-  const p = valeurNumerique("nouveauP");
-  const l = valeurNumerique("nouveauL");
-  const g = valeurNumerique("nouveauG");
-  if (!nom || !portion || p === null || l === null || g === null || p + l + g === 0) {
-    alert("Renseigne un nom, une portion et au moins une valeur nutritionnelle.");
+  const resultat = trouverPlat($("nouveauNom").value);
+  if (!resultat) {
+    alert("Ce plat n'est pas encore dans la base. Choisis un nom proposé par la liste.");
     return;
   }
-  const item = { nom, portion, ico: "🍽️", p, l, g };
-  const categorie = $("nouvelleCategorie").value;
-  MENU[categorie].items.unshift(item);
+  consommer(resultat.item, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
   $("ajoutForm").reset();
-  $("nouveauKcal").textContent = "Calories calculées : 0 kcal";
+  $("platReconnu").textContent = "Choisis un plat de la base pour remplir automatiquement ses informations.";
+  $("ajoutReconnu").disabled = true;
   $("ajoutForm").hidden = true;
-  recherche = "";
-  $("recherche").value = "";
-  construirePlateau();
 }
 
 $("ouvrirAjout").addEventListener("click", () => {
+  construireListePlats();
   $("ajoutForm").hidden = false;
   $("nouveauNom").focus();
 });
 $("fermerAjout").addEventListener("click", () => { $("ajoutForm").hidden = true; });
+$("nouveauNom").addEventListener("input", actualiserPlatReconnu);
 $("ajoutForm").addEventListener("submit", ajouterNouveauPlat);
-["nouveauP", "nouveauL", "nouveauG"].forEach(id => $(id).addEventListener("input", actualiserKcalNouveau));
 
 const champRecherche = $("recherche");
 champRecherche.addEventListener("input", () => {
