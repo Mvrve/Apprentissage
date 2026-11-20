@@ -170,6 +170,12 @@
       background:radial-gradient(circle 100px at 50% 100%,transparent 45%,#8b5cf6 45%,#8b5cf6 54%,#3b82f6 54%,#3b82f6 63%,#22c55e 63%,#22c55e 72%,#facc15 72%,#facc15 81%,#f97316 81%,#f97316 90%,#ef4444 90%,#ef4444 99%,transparent 99%)}
     .bars{gap:6px 10px}
   }
+
+  /* ---------- Navigation entre les animations ---------- */
+  .switcher { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; max-width:1300px; margin:0 auto 12px; }
+  .switcher a { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; background:#fff; color:#1e3a8a; border:2px solid #bfdbfe; font-size:.88rem; font-weight:700; text-decoration:none; box-shadow:0 2px 8px rgba(30,58,138,.12); transition:transform .15s, background .15s, color .15s; }
+  .switcher a.active, .switcher a:hover { background:#2563eb; border-color:#2563eb; color:#fff; transform:translateY(-1px); }
+  @media (max-width:900px) { .switcher { margin-bottom:8px; } .switcher a { padding:7px 11px; font-size:.82rem; } }
 </style>
 </head>
 <body>
@@ -178,6 +184,11 @@
   <h1>🍽️ Compose l'assiette de Tom</h1>
   <p>Choisis des aliments pour composer son assiette, puis sers-la. Attention : au bout de <b>4 assiettes mal équilibrées</b>, Tom explose !</p>
 </header>
+<nav class="switcher" aria-label="Choisir une animation">
+  <a class="active" href="index.html" aria-current="page">🍽️ Animation 1</a>
+  <a href="intervention2.html">📊 Animation 2</a>
+</nav>
+
 
 <div class="layout">
   <!-- ALIMENTS -->
