@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon plateau-repas – Calories et nutriments</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif; color: #333;
+    background: linear-gradient(180deg, #e8f4ff 0%, #fff7e6 100%);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ---------- En-tête ---------- */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 5px 12px 0; }
+  h1 { margin: 0; font-size: 1.1rem; color: #2a4d7a; }
+  .sexe { display: flex; align-items: center; gap: 6px; font-size: .75rem; color: #555; flex-wrap: wrap; }
+  .sexe button, .qte button {
+    border: 2px solid #ccc; background: #fafafa; border-radius: 16px; padding: 3px 10px;
+    cursor: pointer; font-size: .75rem; font-family: inherit;
+  }
+  .sexe button.actif, .qte button.actif { border-color: #2a4d7a; background: #2a4d7a; color: #fff; }
+
+  /* ---------- Grille principale ---------- */
+  main {
+    flex: 1; min-height: 0; display: grid; gap: 8px; padding: 6px 10px 8px;
+    grid-template-columns: 1fr minmax(250px, 330px) 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: "sante perso nutri" "plateau plateau plateau";
+  }
+  .panel {
+    background: #fff; border-radius: 12px; padding: 8px 10px; min-height: 0; overflow: auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08); display: flex; flex-direction: column; gap: 5px;
+  }
+  .panel h2 { margin: 0; font-size: .9rem; color: #2a4d7a; }
+  .petit { font-size: .68rem; color: #666; line-height: 1.25; }
+
+  /* ---------- Jauges (communes) ---------- */
+  .gauge { position: relative; height: 15px; background: #eee; border-radius: 8px; overflow: hidden; }
+  .gauge .fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; transition: width .5s; }
+  .gauge .zone {
+    position: absolute; top: 0; bottom: 0; background: rgba(46,139,87,.25);
+    border-left: 2px solid #2e8b57; border-right: 2px solid #2e8b57;
+  }
+  .g-head { display: flex; justify-content: space-between; align-items: baseline; font-size: .82rem; font-weight: 600; }
+  .g-foot { display: flex; justify-content: space-between; font-size: .66rem; color: #777; }
+  .g-etat { font-size: .7rem; font-weight: 600; min-height: 1em; }
+
+  /* ---------- Gauche : santé ---------- */
+  .sante { grid-area: sante; }
+  .bloc { background: #f6f9fc; border-radius: 9px; padding: 5px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .effet {
+    display: flex; align-items: center; gap: 8px; border-radius: 9px; padding: 4px 8px;
+    border-left: 4px solid transparent; transition: all .6s ease;
+  }
+  .effet .e-ico { font-size: 1.25rem; }
+  .effet .e-txt { flex: 1; min-width: 0; }
+  .effet .e-nom { font-size: .76rem; font-weight: 600; line-height: 1.15; }
+  .effet .e-det { font-size: .64rem; color: #666; }
+  .effet .e-bar { height: 5px; background: #e3e3e3; border-radius: 3px; overflow: hidden; margin-top: 2px; }
+  .effet .e-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #f39c12, #c0392b); transition: width .6s; }
+  .effet .e-niv { font-size: .64rem; font-weight: 700; color: #c0392b; white-space: nowrap; width: 62px; text-align: right; }
+
+  /* ---------- Centre : personnage ---------- */
+  .center { grid-area: perso; display: flex; flex-direction: column; align-items: center; min-height: 0; }
+  .counter {
+    position: relative; background: #fff; border: 3px solid #ff9f1c; border-radius: 14px;
+    padding: 2px 18px 3px; font-size: 1.35rem; font-weight: bold; color: #e76f00; text-align: center;
+    box-shadow: 0 3px 8px rgba(0,0,0,.1); transition: transform .15s;
+  }
+  .counter::after {
+    content: ""; position: absolute; left: 50%; bottom: -11px; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #ff9f1c; border-bottom: 0; border-top-width: 9px;
+  }
+  .counter.bump { transform: scale(1.1); }
+  .counter small { display: block; font-size: .64rem; font-weight: normal; color: #777; }
+  #perso { flex: 1; min-height: 0; width: 100%; margin-top: 8px; }
+  #perso * { transition: all .5s ease; }
+  .state { font-weight: 600; color: #2a4d7a; font-size: .82rem; text-align: center; min-height: 1.2em; }
+
+  /* ---------- Droite : nutriments ---------- */
+  .nutri { grid-area: nutri; }
+  .repart { display: flex; height: 13px; border-radius: 7px; overflow: hidden; background: #eee; }
+  .repart div { width: 0; transition: width .5s; }
+  .equiv { background: #fff8ee; border: 1px dashed #ff9f1c; border-radius: 9px; padding: 5px 8px; font-size: .72rem; line-height: 1.35; }
+  .equiv b { color: #e76f00; }
+
+  /* ---------- Bas : plateau ---------- */
+  .plateau {
+    grid-area: plateau; display: flex; flex-direction: column; gap: 5px;
+    background: #d9b38c; border: 6px solid #b07d4f; border-radius: 16px; padding: 6px;
+    box-shadow: inset 0 0 25px rgba(0,0,0,.15), 0 4px 10px rgba(0,0,0,.2);
+  }
+  .p-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .75rem; color: #4a2f14; }
+  .p-bar strong { font-size: .88rem; }
+  .qte { display: flex; align-items: center; gap: 4px; }
+  .p-bar .act { background: #2a4d7a; color: #fff; border: 0; border-radius: 16px; padding: 4px 11px; cursor: pointer; font-size: .74rem; font-family: inherit; }
+  .histo { flex: 1; min-width: 80px; white-space: nowrap; overflow: auto; font-size: .68rem; text-align: right; }
+  .histo span { display: inline-block; background: rgba(255,255,255,.85); border-radius: 10px; padding: 1px 6px; margin-left: 2px; }
+  .cats { display: grid; grid-template-columns: 5fr 4fr 5fr; gap: 6px; }
+  .cat { background: rgba(255,255,255,.92); border-radius: 10px; padding: 4px 6px 6px; }
+  .cat h3 { margin: 0 0 3px; font-size: .82rem; color: #2a4d7a; }
+  .items { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 4px; }
+  .item {
+    display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center;
+    background: #fff; border: 2px solid #e5e5e5; border-radius: 9px; padding: 3px 3px 4px;
+    cursor: pointer; font-family: inherit; transition: .15s;
+  }
+  .item:hover { border-color: #ff9f1c; background: #fff8ee; transform: translateY(-2px); }
+  .item:active { transform: scale(.96); }
+  .item .ico { font-size: 1.25rem; line-height: 1.1; }
+  .item .nom { font-weight: 600; font-size: .7rem; line-height: 1.1; }
+  .item .portion { font-size: .58rem; color: #888; }
+  .item .kcal { font-weight: bold; color: #e76f00; font-size: .72rem; }
+  .item .macros { display: flex; gap: 3px; font-size: .58rem; font-weight: 600; }
+  .mp { color: #2980b9; } .ml { color: #d68910; } .mg { color: #8e44ad; }
+
+  .flyer { position: fixed; font-size: 1.8rem; pointer-events: none; z-index: 99; transition: all .7s cubic-bezier(.4,-.2,.6,1.2); }
+
+  /* Petit écran : une colonne + défilement */
+  @media (max-width: 950px) {
+    body { overflow: auto; height: auto; }
+    main { grid-template-columns: 1fr; grid-template-rows: auto; grid-template-areas: "perso" "plateau" "nutri" "sante"; }
+    #perso { height: 250px; flex: none; }
+    .cats { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Navigation entre les animations ---------- */
+  .switcher { display:flex; justify-content:center; gap:8px; flex-wrap:wrap; max-width:1300px; margin:0 auto 12px; }
+  .switcher a { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; background:#fff; color:#1e3a8a; border:2px solid #bfdbfe; font-size:.88rem; font-weight:700; text-decoration:none; box-shadow:0 2px 8px rgba(30,58,138,.12); transition:transform .15s, background .15s, color .15s; }
+  .switcher a.active, .switcher a:hover { background:#2563eb; border-color:#2563eb; color:#fff; transform:translateY(-1px); }
+  @media (max-width:900px) { .switcher { margin-bottom:8px; } .switcher a { padding:7px 11px; font-size:.82rem; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍽️ Mon plateau-repas : calories et nutriments</h1>
+  <div class="sexe">
+    Besoins énergétiques par jour :
+    <button id="btnFille" class="actif" onclick="choisirSexe('fille')">👧 Filles : 1 800 à 2 400 kcal</button>
+    <button id="btnGarcon" onclick="choisirSexe('garcon')">👦 Garçons : 2 200 à 3 200 kcal</button>
+  </div>
+</header>
+<nav class="switcher" aria-label="Choisir une animation">
+  <a href="index.html">🍽️ Animation 1</a>
+  <a class="active" href="intervention2.html" aria-current="page">📊 Animation 2</a>
+</nav>
+
+
+<main>
+  <!-- ======== GAUCHE : CONSÉQUENCES SUR LA SANTÉ ======== -->
+  <section class="panel sante">
+    <h2>⚕️ Conséquences possibles sur la santé</h2>
+    <div class="petit">Effets d'une alimentation <b>durablement</b> trop riche en calories et déséquilibrée.</div>
+
+    <div class="bloc">
+      <div class="g-head"><span>⚡ Énergie du jour</span><span><span id="eKcal">0</span> kcal</span></div>
+      <div class="gauge"><div class="fill" id="eFill" style="background:#ff9f1c"></div><div class="zone" id="eZone"></div></div>
+      <div class="g-etat" id="eEtat"></div>
+    </div>
+
+    <div id="effets"></div>
+
+    <div class="petit">ℹ️ Ces effets n'apparaissent pas après un seul repas : ils concernent des apports qui dépassent <b>régulièrement</b> les besoins de l'organisme.</div>
+  </section>
+
+  <!-- ======== CENTRE : COMPTEUR + PERSONNAGE ======== -->
+  <section class="center">
+    <div class="counter" id="compteur">
+      <span id="kcal">0</span> kcal
+      <small>calories consommées aujourd'hui</small>
+    </div>
+
+    <svg id="perso" viewBox="-10 0 280 300" preserveAspectRatio="xMidYMid meet" aria-label="Personnage">
+      <ellipse id="ombre" cx="130" cy="290" rx="55" ry="7" fill="rgba(0,0,0,.12)"/>
+      <rect id="jambeG" x="105" y="200" width="18" height="80" rx="9" fill="#3b5998"/>
+      <rect id="jambeD" x="137" y="200" width="18" height="80" rx="9" fill="#3b5998"/>
+      <ellipse id="piedG" cx="114" cy="282" rx="16" ry="7" fill="#333"/>
+      <ellipse id="piedD" cx="146" cy="282" rx="16" ry="7" fill="#333"/>
+      <rect id="brasG" x="68" y="120" width="16" height="80" rx="8" fill="#f1c27d"/>
+      <rect id="brasD" x="176" y="120" width="16" height="80" rx="8" fill="#f1c27d"/>
+      <ellipse id="corps" cx="130" cy="160" rx="45" ry="60" fill="#e74c3c"/>
+      <path id="jupe" d="" fill="#e84393"/>
+      <rect x="120" y="88" width="20" height="18" fill="#f1c27d"/>
+      <ellipse id="mecheG" cx="94" cy="88" rx="9" ry="32" fill="#5a3825"/>
+      <ellipse id="mecheD" cx="166" cy="88" rx="9" ry="32" fill="#5a3825"/>
+      <ellipse id="tete" cx="130" cy="60" rx="34" ry="36" fill="#f1c27d"/>
+      <path id="cheveux" d="" fill="#5a3825"/>
+      <circle id="noeud" cx="156" cy="32" r="7" fill="#ff5fa2"/>
+      <circle id="joueG" cx="112" cy="68" r="5" fill="#f5a6a6" opacity=".5"/>
+      <circle id="joueD" cx="148" cy="68" r="5" fill="#f5a6a6" opacity=".5"/>
+      <circle cx="118" cy="58" r="3.5" fill="#222"/>
+      <circle cx="142" cy="58" r="3.5" fill="#222"/>
+      <path id="bouche" d="M118 76 Q130 86 142 76" stroke="#a33" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path id="goutte" d="M172 40 q7 11 0 16 q-7 -5 0 -16 Z" fill="#6ec6ff" style="display:none"/>
+    </svg>
+
+    <div class="state" id="etat"></div>
+  </section>
+
+  <!-- ======== DROITE : APPORTS NUTRITIONNELS ======== -->
+  <section class="panel nutri">
+    <h2>📊 Apports nutritionnels</h2>
+    <div id="jauges"></div>
+
+    <div class="bloc">
+      <div class="g-head"><span>D'où viennent les calories ?</span></div>
+      <div class="repart">
+        <div id="rP" style="background:#3498db"></div>
+        <div id="rL" style="background:#f39c12"></div>
+        <div id="rG" style="background:#9b59b6"></div>
+      </div>
+      <div class="g-foot"><span id="rTxt">Aucun aliment consommé</span></div>
+    </div>
+
+    <div class="equiv">
+      <b>Équivalences énergétiques</b><br>
+      1 g de protéines = <b>4 kcal</b> · 1 g de glucides = <b>4 kcal</b> · 1 g de lipides = <b>9 kcal</b><br>
+      <span id="calcul"></span>
+    </div>
+  </section>
+
+  <!-- ======== BAS : PLATEAU-REPAS ======== -->
+  <section class="plateau">
+    <div class="p-bar">
+      <strong>🍽️ Plateau-repas</strong>
+      <div class="qte">
+ Quantité :
+        <button data-q="0.5" onclick="choisirQuantite(0.5)">½ portion</button>
+        <button data-q="1" class="actif" onclick="choisirQuantite(1)">1 portion</button>
+        <button data-q="2" onclick="choisirQuantite(2)">2 portions</button>
+      </div>
+      <button class="act" onclick="annuler()">↩️ Annuler</button>
+      <button class="act" onclick="reinitialiser()">🔄 Nouvelle journée</button>
+      <div class="histo" id="histo"></div>
+    </div>
+    <div class="cats" id="cats"></div>
+  </section>
+</main>
+
+<script>
+/* ============ DONNÉES : grammes de protéines (p), lipides (l), glucides (g) par portion ============
+   Valeurs approximatives. Les kcal sont calculées : 4 × p + 9 × l + 4 × g     */
+const MENU = {
+  boissons: { titre: "🥤 Boissons", items: [
+    { nom: "Eau",         portion: "1 verre (25 cl)",ico: "💧", p: 0, l: 0, g: 0  },
+    { nom: "Jus de pomme",       portion: "1 verre (25 cl)",ico: "🧃", p: 0, l: 0, g: 28 },
+    { nom: "Coca-Cola",          portion: "1 verre (25 cl)",ico: "🥤", p: 0, l: 0, g: 27 },
+    { nom: "Sirop de grenadine", portion: "1 verre dilué (25 cl)", ico: "🍹", p: 0, l: 0, g: 18 },
+    { nom: "Jus d'orange",       portion: "1 verre (25 cl)",ico: "🍊", p: 2, l: 0, g: 24 },
+  ]},
+  plats: { titre: "🍽️ Plats", items: [
+    { nom: "Hamburger-frites",          portion: "1 menu",     ico: "🍔", p: 30, l: 45, g: 85 },
+    { nom: "Salade, tomates et steak",  portion: "1 assiette", ico: "🥗", p: 26, l: 22, g: 8  },
+    { nom: "Haricots verts avec pâtes", portion: "1 assiette", ico: "🍝", p: 13, l: 8,  g: 60 },
+    { nom: "Courgettes",  portion: "1 assiette", ico: "🥒", p: 4,  l: 7,  g: 9  },
+  ]},
+  desserts: { titre: "🍰 Desserts", items: [
+    { nom: "Pomme",   portion: "1 fruit",   ico: "🍎", p: 0, l: 0,  g: 20 },
+    { nom: "Glace",   portion: "2 boules",  ico: "🍦", p: 3, l: 9,  g: 24 },
+    { nom: "Gâteau",  portion: "1 part",    ico: "🍰", p: 5, l: 18, g: 40 },
+    { nom: "Yaourt",  portion: "1 pot nature",     ico: "🥣", p: 5, l: 4,  g: 6  },
+    { nom: "Bonbons", portion: "1 poignée (50 g)", ico: "🍬", p: 3, l: 0,  g: 39 },
+  ]},
+};
+
+/* Repères nutritionnels quotidiens (en grammes) */
+const NUTRI = [
+  { cle: "p", nom: "Protéines", ico: "🥩", min: 60,  max: 98,  echelle: 150, kcalG: 4, coul: "#3498db" },
+  { cle: "l", nom: "Lipides",   ico: "🧈", min: 78,  max: 116, echelle: 180, kcalG: 9, coul: "#f39c12" },
+  { cle: "g", nom: "Glucides",  ico: "🍞", min: 225, max: 325, echelle: 500, kcalG: 4, coul: "#9b59b6" },
+];
+
+/* Conséquences possibles : niveau (0 à 1) selon l'excès d'énergie e, de lipides xl et de glucides xg */
+const EFFETS = [
+  { ico: "❤️", nom: "Risque de maladies cardiovasculaires", det: "aggravé par l'excès de lipides",   niv: (e, xl, xg) => e * (1 + .8 * xl) },
+  { ico: "🩸", nom: "Augmentation du risque de diabète de type 2", det: "aggravé par l'excès de glucides",         niv: (e, xl, xg) => e * (1 + .8 * xg) },
+  { ico: "🦴", nom: "Douleurs et problèmes articulaires",   det: "le surpoids pèse sur les articulations",  niv: (e, xl, xg) => e * .9 },
+  { ico: "😴", nom: "Fatigue et baisse de la condition physique",  det: "essoufflement, moins d'endurance", niv: (e, xl, xg) => e * 1.4 },
+  { ico: "⚗️", nom: "Risque de troubles métaboliques",      det: "aggravé par les excès de lipides et de glucides", niv: (e, xl, xg) => e * (1 + .4 * xl + .4 * xg) },
+];
+
+const BESOINS = { fille: [1800, 2400], garcon: [2200, 3200] };
+const MAX_ENERGIE = 5000;      // échelle de la jauge d'énergie
+const EXCES_MAX = 2000;        // excès (kcal) pour lequel les effets sont au maximum
+
+let tot = { p: 0, l: 0, g: 0 };
+let historique = [];           // { item, q }
+let sexe = "fille";
+let quantite = 1;
+
+const $ = id => document.getElementById(id);
+const borne = x => Math.max(0, Math.min(1, x));
+const fmt = n => n.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
+const kcalDe = o => 4 * o.p + 9 * o.l + 4 * o.g;
+
+/* ============ CONSTRUCTION DE L'INTERFACE ============ */
+function construirePlateau() {
+  const cats = $("cats");
+  cats.innerHTML = "";
+  const prefixe = quantite === 1 ? "" : (quantite === 0.5 ? "½ × " : "2 × ");
+  for (const cle in MENU) {
+    const cat = MENU[cle];
+    const div = document.createElement("div");
+    div.className = "cat";
+    div.innerHTML = `<h3>${cat.titre}</h3>`;
+    const items = document.createElement("div");
+    items.className = "items";
+    cat.items.forEach(item => {
+      const btn = document.createElement("button");
+      btn.className = "item";
+      btn.innerHTML = `
+ <span class="ico">${item.ico}</span>
+        <span class="nom">${item.nom}</span>
+        <span class="portion">${prefixe}${item.portion}</span>
+ <span class="kcal">${Math.round(kcalDe(item) * quantite)} kcal</span>
+        <span class="macros">
+          <span class="mp">P ${fmt(item.p * quantite)}</span>
+   <span class="ml">L ${fmt(item.l * quantite)}</span>
+   <span class="mg">G ${fmt(item.g * quantite)}</span>
+        </span>`;
+      btn.title = `Protéines ${fmt(item.p * quantite)} g · Lipides ${fmt(item.l * quantite)} g · Glucides ${fmt(item.g * quantite)} g`;
+      btn.onclick = e => consommer(item, e);
+      items.appendChild(btn);
+    });
+    div.appendChild(items);
+    cats.appendChild(div);
+  }
+}
+
+function construireJauges() {
+  $("jauges").innerHTML = NUTRI.map(n => `
+    <div class="bloc" style="margin-bottom:5px">
+      <div class="g-head"><span>${n.ico} ${n.nom}</span><span style="color:${n.coul}"><span id="v_${n.cle}">0</span> g</span></div>
+      <div class="gauge">
+ <div class="fill" id="f_${n.cle}" style="background:${n.coul}"></div>
+        <div class="zone" style="left:${n.min / n.echelle * 100}%; width:${(n.max - n.min) / n.echelle * 100}%"></div>
+      </div>
+      <div class="g-foot"><span>Repère : environ ${n.min} à ${n.max} g par jour</span><span id="k_${n.cle}">0 kcal</span></div>
+      <div class="g-etat" id="e_${n.cle}"></div>
+    </div>`).join("");
+}
+
+function construireEffets() {
+  $("effets").innerHTML = EFFETS.map((ef, i) => `
+    <div class="effet" id="ef${i}">
+      <span class="e-ico">${ef.ico}</span>
+      <div class="e-txt">
+        <div class="e-nom">${ef.nom}</div>
+        <div class="e-det">${ef.det}</div>
+        <div class="e-bar"><div id="efb${i}"></div></div>
+      </div>
+      <span class="e-niv" id="efn${i}"></span>
+    </div>`).join("");
+}
+
+/* ============ ACTIONS ============ */
+function consommer(item, e) {
+  // l'aliment "vole" vers la bouche
+  const flyer = document.createElement("div");
+  flyer.className = "flyer"; flyer.textContent = item.ico;
+  flyer.style.left = e.clientX - 14 + "px"; flyer.style.top = e.clientY - 14 + "px";
+  document.body.appendChild(flyer);
+  const bouche = $("bouche").getBoundingClientRect();
+  requestAnimationFrame(() => {
+    flyer.style.left = bouche.left + bouche.width / 2 - 14 + "px";
+    flyer.style.top  = bouche.top - 8 + "px";
+    flyer.style.transform = "scale(.3)"; flyer.style.opacity = "0";
+  });
+  setTimeout(() => flyer.remove(), 750);
+
+  tot.p += item.p * quantite; tot.l += item.l * quantite; tot.g += item.g * quantite;
+  historique.push({ item, q: quantite });
+  miseAJour(true);
+}
+
+function annuler() {
+  const d = historique.pop();
+  if (!d) return;
+  tot.p -= d.item.p * d.q; tot.l -= d.item.l * d.q; tot.g -= d.item.g * d.q;
+  miseAJour();
+}
+
+function reinitialiser() { tot = { p: 0, l: 0, g: 0 }; historique = []; miseAJour(); }
+
+function choisirSexe(s) {
+  sexe = s;
+  $("btnFille").classList.toggle("actif", s === "fille");
+  $("btnGarcon").classList.toggle("actif", s === "garcon");
+  miseAJour();
+}
+
+function choisirQuantite(q) {
+  quantite = q;
+  document.querySelectorAll(".qte button").forEach(b => b.classList.toggle("actif", Number(b.dataset.q) === q));
+  construirePlateau();
+}
+
+/* ============ MISE À JOUR DE L'AFFICHAGE ============ */
+function miseAJour(animer = false) {
+  const kcal = Math.round(kcalDe(tot));
+  const [min, max] = BESOINS[sexe];
+  const exces = borne((kcal - max) / EXCES_MAX);          // 0 = pas d'excès → 1 = très gros excès
+  const xl = borne((tot.l - NUTRI[1].max) / NUTRI[1].max); // excès de lipides
+  const xg = borne((tot.g - NUTRI[2].max) / NUTRI[2].max); // excès de glucides
+
+  /* --- compteur --- */
+  $("kcal").textContent = kcal.toLocaleString("fr-FR");
+  if (animer) { $("compteur").classList.add("bump"); setTimeout(() => $("compteur").classList.remove("bump"), 150); }
+
+  /* --- jauge d'énergie (gauche) --- */
+  $("eKcal").textContent = kcal.toLocaleString("fr-FR");
+  $("eZone").style.left  = (min / MAX_ENERGIE * 100) + "%";
+  $("eZone").style.width = ((max - min) / MAX_ENERGIE * 100) + "%";
+  $("eFill").style.width = borne(kcal / MAX_ENERGIE) * 100 + "%";
+  const eEtat = $("eEtat");
+  if (kcal === 0)       { eEtat.textContent = "Commence à composer ton repas !"; eEtat.style.color = "#555"; }
+  else if (kcal < min)  { eEtat.textContent = `Encore ${(min - kcal).toLocaleString("fr-FR")} kcal pour couvrir les besoins.`; eEtat.style.color = "#2a7ab8"; }
+  else if (kcal <= max) { eEtat.textContent = "✅ Apports adaptés aux besoins."; eEtat.style.color = "#2e8b57"; }
+  else    { eEtat.textContent = `⚠️ Excès de ${(kcal - max).toLocaleString("fr-FR")} kcal par rapport aux besoins.`; eEtat.style.color = "#c0392b"; }
+
+  /* --- jauges des nutriments (droite) --- */
+  NUTRI.forEach(n => {
+    const v = tot[n.cle];
+    $("v_" + n.cle).textContent = fmt(v);
+    $("f_" + n.cle).style.width = borne(v / n.echelle) * 100 + "%";
+    $("k_" + n.cle).textContent = `${fmt(v)} g × ${n.kcalG} = ${Math.round(v * n.kcalG).toLocaleString("fr-FR")} kcal`;
+    const et = $("e_" + n.cle);
+    if (v < n.min)       { et.textContent = `Encore ${fmt(n.min - v)} g pour atteindre le repère`; et.style.color = "#2a7ab8"; }
+    else if (v <= n.max) { et.textContent = "✅ Dans le repère quotidien"; et.style.color = "#2e8b57"; }
+    else   { et.textContent = `⚠️ ${fmt(v - n.max)} g au-dessus du repère`; et.style.color = "#c0392b"; }
+  });
+
+  /* --- répartition de l'énergie --- */
+  const kP = tot.p * 4, kL = tot.l * 9, kG = tot.g * 4, kT = kP + kL + kG;
+  const pc = x => kT ? x / kT * 100 : 0;
+  $("rP").style.width = pc(kP) + "%"; $("rL").style.width = pc(kL) + "%"; $("rG").style.width = pc(kG) + "%";
+  $("rTxt").innerHTML = kT
+    ? `<span class="mp">Protéines ${Math.round(pc(kP))} %</span> · <span class="ml">Lipides ${Math.round(pc(kL))} %</span> · <span class="mg">Glucides ${Math.round(pc(kG))} %</span>`
+    : "Aucun aliment consommé";
+  $("calcul").textContent = `Calcul : ${fmt(tot.p)} × 4 + ${fmt(tot.l)} × 9 + ${fmt(tot.g)} × 4 = ${kcal.toLocaleString("fr-FR")} kcal`;
+
+  /* --- conséquences sur la santé (gauche) --- */
+  EFFETS.forEach((ef, i) => {
+    const niv = borne(ef.niv(exces, xl, xg));
+    const el = $("ef" + i);
+    el.style.opacity = .4 + .6 * niv;
+    el.style.filter = `grayscale(${1 - niv})`;
+    el.style.background = `rgba(231, 76, 60, ${.04 + .22 * niv})`;
+    el.style.borderLeftColor = `rgba(192, 57, 43, ${niv})`;
+    $("efb" + i).style.width = niv * 100 + "%";
+    $("efn" + i).textContent = niv === 0 ? "" : niv < .34 ? "début" : niv < .67 ? "marqué" : "très marqué";
+  });
+
+  /* --- personnage + historique --- */
+  dessinerPersonnage(kcal, exces);
+  $("histo").innerHTML = historique.map(h =>
+    `<span>${h.q === 1 ? "" : h.q === 0.5 ? "½ " : "2× "}${h.item.ico} ${h.item.nom}</span>`).join("");
+  $("histo").scrollLeft = $("histo").scrollWidth;
+}
+
+/* ============ PERSONNAGE : évolue selon la quantité ET la composition ============ */
+function dessinerPersonnage(kcal, exces) {
+  const cx = 130, fille = sexe === "fille";
+  const [min, max] = BESOINS[sexe];
+
+  // gras : énergie apportée par les lipides et les glucides → ventre, visage, cuisses
+  // muscle : protéines → bras et épaules un peu plus étoffés
+  const gras   = borne((9 * tot.l + 4 * tot.g) / 4200);
+  const muscle = borne(tot.p / 150);
+
+  const corpsRx = 45 + 52 * gras + 4 * muscle, corpsRy = 60 + 10 * gras;
+  const teteRx  = 34 + 8 * gras,  teteRy = 36 + 4 * gras;
+  const brasW   = 16 + 6 * gras + 6 * muscle;
+  const jambeW  = 18 + 10 * gras + 3 * muscle;
+  const ecart   = corpsRx + 8;
+  const set = (id, attrs) => { const el = $(id); for (const k in attrs) el.setAttribute(k, attrs[k]); };
+
+  set("corps",  { rx: corpsRx, ry: corpsRy, fill: fille ? "#e84393" : "#e74c3c" });
+  set("tete",   { rx: teteRx, ry: teteRy });
+  set("brasG",  { x: cx - ecart - brasW, width: brasW });
+  set("brasD",  { x: cx + ecart, width: brasW });
+  set("jambeG", { x: cx - 10 - jambeW, width: jambeW, fill: fille ? "#f1c27d" : "#3b5998" });
+  set("jambeD", { x: cx + 10, width: jambeW, fill: fille ? "#f1c27d" : "#3b5998" });
+  set("piedG",  { cx: cx - 10 - jambeW / 2, rx: 16 + 4 * gras, fill: fille ? "#c0392b" : "#333" });
+  set("piedD",  { cx: cx + 10 + jambeW / 2, rx: 16 + 4 * gras, fill: fille ? "#c0392b" : "#333" });
+  set("joueG",  { cx: cx - (18 + 6 * gras), r: 5 + 5 * gras, opacity: .4 + .5 * gras });
+  set("joueD",  { cx: cx + (18 + 6 * gras), r: 5 + 5 * gras, opacity: .4 + .5 * gras });
+  set("ombre",  { rx: 55 + 50 * gras });
+
+  const aff = fille ? "block" : "none";
+  $("jupe").style.display = $("mecheG").style.display = $("mecheD").style.display = $("noeud").style.display = aff;
+  if (fille) {
+    set("jupe", { d: `M${cx - corpsRx * .75} 190 L${cx - corpsRx - 14} 232 L${cx + corpsRx + 14} 232 L${cx + corpsRx * .75} 190 Z` });
+    set("mecheG", { cx: cx - teteRx - 2, ry: 32 + 2 * gras });
+    set("mecheD", { cx: cx + teteRx + 2, ry: 32 + 2 * gras });
+    set("noeud",  { cx: cx + teteRx - 6, cy: 60 - teteRy + 8 });
+    set("cheveux", { d: `M${cx - teteRx - 2} 62 Q${cx - teteRx - 4} 16 ${cx} 18 Q${cx + teteRx + 4} 16 ${cx + teteRx + 2} 62 Q${cx + teteRx - 12} 38 ${cx} 40 Q${cx - teteRx + 12} 38 ${cx - teteRx - 2} 62 Z` });
+  } else {
+    set("cheveux", { d: `M${cx - teteRx} 55 Q${cx - teteRx + 4} 20 ${cx} 22 Q${cx + teteRx - 4} 20 ${cx + teteRx} 55 Q${cx + teteRx - 14} 40 ${cx} 42 Q${cx - teteRx + 14} 40 ${cx - teteRx} 55 Z` });
+  }
+
+  // expression : sourire → neutre → fatigué ; goutte de sueur si gros excès
+  const bouche = $("bouche");
+  if (exces === 0)      bouche.setAttribute("d", "M118 76 Q130 86 142 76");
+  else if (exces < .5)  bouche.setAttribute("d", "M118 78 L142 78");
+  else    bouche.setAttribute("d", "M118 82 Q130 74 142 82");
+  $("goutte").style.display = exces > .4 ? "block" : "none";
+  $("goutte").setAttribute("transform", `translate(${teteRx - 34} 0)`);
+
+  // état écrit sous le personnage
+  const tropGras = tot.l > NUTRI[1].max, tropSucre = tot.g > NUTRI[2].max;
+  let txt;
+  if (kcal === 0)        txt = "J'ai faim ! 😋";
+  else if (kcal < min)   txt = "En forme, encore de l'appétit 🙂";
+  else if (kcal <= max)  txt = "Besoins couverts, en pleine forme 😀";
+  else if (exces < .34)  txt = "Début de prise de poids 😐";
+  else if (exces < .67)  txt = "Surpoids 😓";
+  else            txt = "Trop plein ! 🥴";
+  const remarques = [];
+  if (tropGras)  remarques.push("trop gras 🧈");
+  if (tropSucre) remarques.push("trop sucré 🍬");
+  $("etat").textContent = txt + (remarques.length ? " — " + remarques.join(", ") : "");
+}
+
+/* ============ INIT ============ */
+construireJauges();
+construireEffets();
+construirePlateau();
+miseAJour();
+</script>
+</body>
+</html>
