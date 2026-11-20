@@ -138,6 +138,19 @@
   .catalogue-empty { grid-column: 1 / -1; padding: 14px; text-align: center; color: #666; background: rgba(255,255,255,.85); border-radius: 10px; font-size: .8rem; }
   .plateau { max-height: 48vh; overflow: auto; }
   @media (max-width: 950px) { .plateau { max-height: none; overflow: visible; } }
+
+  .add-dish { background:#2e8b57; color:#fff; border:0; border-radius:16px; padding:5px 11px; cursor:pointer; font:inherit; font-size:.74rem; font-weight:700; white-space:nowrap; }
+  .add-dish:hover { background:#236b43; }
+  .ajout-form { display:grid; grid-template-columns:repeat(4, minmax(100px, 1fr)); gap:6px; align-items:end; padding:8px; background:rgba(255,255,255,.92); border-radius:10px; }
+  .ajout-form[hidden] { display:none; }
+  .ajout-field { display:flex; flex-direction:column; gap:2px; font-size:.65rem; color:#4a2f14; }
+  .ajout-field input, .ajout-field select { width:100%; min-width:0; border:1px solid #c9b9a8; border-radius:7px; padding:5px 6px; font:inherit; font-size:.72rem; background:#fff; }
+  .ajout-actions { display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  .ajout-actions button { border:0; border-radius:7px; padding:6px 9px; cursor:pointer; font:inherit; font-size:.7rem; font-weight:700; }
+  .ajout-save { background:#2a4d7a; color:#fff; }
+  .ajout-cancel { background:#e5e5e5; color:#333; }
+  .ajout-kcal { grid-column:span 2; font-size:.68rem; color:#2a4d7a; font-weight:600; }
+  @media (max-width:950px) { .ajout-form { grid-template-columns:repeat(2, minmax(110px, 1fr)); } .ajout-kcal { grid-column:span 2; } }
 </style>
 </head>
 <body>
@@ -240,10 +253,23 @@
         <button data-q="1" class="actif" onclick="choisirQuantite(1)">1 portion</button>
         <button data-q="2" onclick="choisirQuantite(2)">2 portions</button>
       </div>
+      
+      <button id="ouvrirAjout" class="add-dish" type="button">➕ Ajouter un plat</button>
       <button class="act" onclick="annuler()">↩️ Annuler</button>
       <button class="act" onclick="reinitialiser()">🔄 Nouvelle journée</button>
       <div class="histo" id="histo"></div>
     </div>
+
+    <form id="ajoutForm" class="ajout-form" hidden>
+      <label class="ajout-field">Nom du plat ou aliment<input id="nouveauNom" required maxlength="60" placeholder="Ex. Gratin de légumes"></label>
+      <label class="ajout-field">Catégorie<select id="nouvelleCategorie"><option value="plats">🍽️ Plats composés</option><option value="legumes">🥕 Légumes</option><option value="feculents">🍚 Féculents</option><option value="proteines">🍗 Protéines</option><option value="desserts">🍰 Desserts</option><option value="boissons">🥤 Boissons</option></select></label>
+      <label class="ajout-field">Portion<input id="nouvellePortion" required maxlength="40" placeholder="1 assiette"></label>
+      <label class="ajout-field">Protéines (g)<input id="nouveauP" type="number" min="0" max="500" step="0.1" value="0" required></label>
+      <label class="ajout-field">Lipides (g)<input id="nouveauL" type="number" min="0" max="500" step="0.1" value="0" required></label>
+      <label class="ajout-field">Glucides (g)<input id="nouveauG" type="number" min="0" max="1000" step="0.1" value="0" required></label>
+      <div class="ajout-kcal" id="nouveauKcal">Calories calculées : 0 kcal</div>
+      <div class="ajout-actions"><button class="ajout-save" type="submit">Ajouter au catalogue</button><button class="ajout-cancel" id="fermerAjout" type="button">Annuler</button></div>
+    </form>
     <div class="cats" id="cats"></div>
   </section>
 </main>
@@ -476,6 +502,49 @@ function choisirSexe(s) {
   $("btnGarcon").classList.toggle("actif", s === "garcon");
   miseAJour();
 }
+
+
+function valeurNumerique(id) {
+  const valeur = Number($(id).value);
+  return Number.isFinite(valeur) && valeur >= 0 ? valeur : null;
+}
+
+function actualiserKcalNouveau() {
+  const p = valeurNumerique("nouveauP") || 0;
+  const l = valeurNumerique("nouveauL") || 0;
+  const g = valeurNumerique("nouveauG") || 0;
+  $("nouveauKcal").textContent = `Calories calculées : ${Math.round(4 * p + 9 * l + 4 * g)} kcal`;
+}
+
+function ajouterNouveauPlat(event) {
+  event.preventDefault();
+  const nom = $("nouveauNom").value.trim();
+  const portion = $("nouvellePortion").value.trim();
+  const p = valeurNumerique("nouveauP");
+  const l = valeurNumerique("nouveauL");
+  const g = valeurNumerique("nouveauG");
+  if (!nom || !portion || p === null || l === null || g === null || p + l + g === 0) {
+    alert("Renseigne un nom, une portion et au moins une valeur nutritionnelle.");
+    return;
+  }
+  const item = { nom, portion, ico: "🍽️", p, l, g };
+  const categorie = $("nouvelleCategorie").value;
+  MENU[categorie].items.unshift(item);
+  $("ajoutForm").reset();
+  $("nouveauKcal").textContent = "Calories calculées : 0 kcal";
+  $("ajoutForm").hidden = true;
+  recherche = "";
+  $("recherche").value = "";
+  construirePlateau();
+}
+
+$("ouvrirAjout").addEventListener("click", () => {
+  $("ajoutForm").hidden = false;
+  $("nouveauNom").focus();
+});
+$("fermerAjout").addEventListener("click", () => { $("ajoutForm").hidden = true; });
+$("ajoutForm").addEventListener("submit", ajouterNouveauPlat);
+["nouveauP", "nouveauL", "nouveauG"].forEach(id => $(id).addEventListener("input", actualiserKcalNouveau));
 
 const champRecherche = $("recherche");
 champRecherche.addEventListener("input", () => {
