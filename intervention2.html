@@ -132,6 +132,12 @@
   .switcher a { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:999px; background:#fff; color:#1e3a8a; border:2px solid #bfdbfe; font-size:.88rem; font-weight:700; text-decoration:none; box-shadow:0 2px 8px rgba(30,58,138,.12); transition:transform .15s, background .15s, color .15s; }
   .switcher a.active, .switcher a:hover { background:#2563eb; border-color:#2563eb; color:#fff; transform:translateY(-1px); }
   @media (max-width:900px) { .switcher { margin-bottom:8px; } .switcher a { padding:7px 11px; font-size:.82rem; } }
+
+  .catalogue-search { flex: 1 1 180px; min-width: 150px; border: 2px solid rgba(74,47,20,.25); border-radius: 16px; padding: 5px 10px; font: inherit; font-size: .75rem; background: #fff; color: #333; }
+  .catalogue-search:focus { outline: 3px solid rgba(42,77,122,.2); border-color: #2a4d7a; }
+  .catalogue-empty { grid-column: 1 / -1; padding: 14px; text-align: center; color: #666; background: rgba(255,255,255,.85); border-radius: 10px; font-size: .8rem; }
+  .plateau { max-height: 48vh; overflow: auto; }
+  @media (max-width: 950px) { .plateau { max-height: none; overflow: visible; } }
 </style>
 </head>
 <body>
@@ -227,6 +233,7 @@
   <section class="plateau">
     <div class="p-bar">
       <strong>🍽️ Plateau-repas</strong>
+      <input id="recherche" class="catalogue-search" type="search" placeholder="🔎 Rechercher un aliment ou un plat" aria-label="Rechercher dans le catalogue">
       <div class="qte">
  Quantité :
         <button data-q="0.5" onclick="choisirQuantite(0.5)">½ portion</button>
@@ -246,25 +253,93 @@
    Valeurs approximatives. Les kcal sont calculées : 4 × p + 9 × l + 4 × g     */
 const MENU = {
   boissons: { titre: "🥤 Boissons", items: [
-    { nom: "Eau",         portion: "1 verre (25 cl)",ico: "💧", p: 0, l: 0, g: 0  },
-    { nom: "Jus de pomme",       portion: "1 verre (25 cl)",ico: "🧃", p: 0, l: 0, g: 28 },
-    { nom: "Coca-Cola",          portion: "1 verre (25 cl)",ico: "🥤", p: 0, l: 0, g: 27 },
-    { nom: "Sirop de grenadine", portion: "1 verre dilué (25 cl)", ico: "🍹", p: 0, l: 0, g: 18 },
-    { nom: "Jus d'orange",       portion: "1 verre (25 cl)",ico: "🍊", p: 2, l: 0, g: 24 },
+    { nom: "Eau", portion: "1 verre (25 cl)", ico: "💧", p: 0, l: 0, g: 0 },
+    { nom: "Lait demi-écrémé", portion: "1 verre (25 cl)", ico: "🥛", p: 8, l: 4, g: 12 },
+    { nom: "Jus d'orange", portion: "1 verre (25 cl)", ico: "🍊", p: 2, l: 0, g: 24 },
+    { nom: "Jus de pomme", portion: "1 verre (25 cl)", ico: "🧃", p: 0, l: 0, g: 28 },
+    { nom: "Smoothie banane", portion: "1 verre (25 cl)", ico: "🍌", p: 4, l: 3, g: 35 },
+    { nom: "Soda", portion: "1 verre (25 cl)", ico: "🥤", p: 0, l: 0, g: 27 },
+    { nom: "Sirop de grenadine", portion: "1 verre dilué (25 cl)", ico: "🍹", p: 0, l: 0, g: 18 }
   ]},
-  plats: { titre: "🍽️ Plats", items: [
-    { nom: "Hamburger-frites",          portion: "1 menu",     ico: "🍔", p: 30, l: 45, g: 85 },
-    { nom: "Salade, tomates et steak",  portion: "1 assiette", ico: "🥗", p: 26, l: 22, g: 8  },
-    { nom: "Haricots verts avec pâtes", portion: "1 assiette", ico: "🍝", p: 13, l: 8,  g: 60 },
-    { nom: "Courgettes",  portion: "1 assiette", ico: "🥒", p: 4,  l: 7,  g: 9  },
+  legumes: { titre: "🥕 Légumes", items: [
+    { nom: "Carottes râpées", portion: "1 bol (150 g)", ico: "🥕", p: 1, l: 0, g: 10 },
+    { nom: "Tomates", portion: "2 tomates (200 g)", ico: "🍅", p: 2, l: 0, g: 7 },
+    { nom: "Salade verte", portion: "1 grand bol (100 g)", ico: "🥬", p: 1, l: 0, g: 3 },
+    { nom: "Concombre", portion: "½ concombre (150 g)", ico: "🥒", p: 1, l: 0, g: 5 },
+    { nom: "Brocolis vapeur", portion: "1 assiette (200 g)", ico: "🥦", p: 6, l: 1, g: 14 },
+    { nom: "Haricots verts", portion: "1 assiette (200 g)", ico: "🫛", p: 4, l: 1, g: 14 },
+    { nom: "Courgettes", portion: "1 assiette (200 g)", ico: "🥒", p: 4, l: 2, g: 8 },
+    { nom: "Ratatouille", portion: "1 assiette (250 g)", ico: "🍆", p: 4, l: 7, g: 18 },
+    { nom: "Soupe de légumes", portion: "1 bol (300 ml)", ico: "🍲", p: 3, l: 3, g: 18 },
+    { nom: "Frites", portion: "1 petite portion (150 g)", ico: "🍟", p: 5, l: 22, g: 53 }
   ]},
-  desserts: { titre: "🍰 Desserts", items: [
-    { nom: "Pomme",   portion: "1 fruit",   ico: "🍎", p: 0, l: 0,  g: 20 },
-    { nom: "Glace",   portion: "2 boules",  ico: "🍦", p: 3, l: 9,  g: 24 },
-    { nom: "Gâteau",  portion: "1 part",    ico: "🍰", p: 5, l: 18, g: 40 },
-    { nom: "Yaourt",  portion: "1 pot nature",     ico: "🥣", p: 5, l: 4,  g: 6  },
-    { nom: "Bonbons", portion: "1 poignée (50 g)", ico: "🍬", p: 3, l: 0,  g: 39 },
+  fruits: { titre: "🍎 Fruits", items: [
+    { nom: "Pomme", portion: "1 fruit", ico: "🍎", p: 0, l: 0, g: 20 },
+    { nom: "Banane", portion: "1 fruit", ico: "🍌", p: 1, l: 0, g: 27 },
+    { nom: "Orange", portion: "1 fruit", ico: "🍊", p: 1, l: 0, g: 15 },
+    { nom: "Poire", portion: "1 fruit", ico: "🍐", p: 1, l: 0, g: 25 },
+    { nom: "Kiwi", portion: "2 fruits", ico: "🥝", p: 2, l: 1, g: 22 },
+    { nom: "Fraises", portion: "1 bol (150 g)", ico: "🍓", p: 1, l: 0, g: 11 },
+    { nom: "Raisin", portion: "1 grappe (150 g)", ico: "🍇", p: 1, l: 0, g: 27 },
+    { nom: "Compote sans sucre", portion: "1 pot (100 g)", ico: "🍏", p: 0, l: 0, g: 14 },
+    { nom: "Fruits secs", portion: "1 poignée (30 g)", ico: "🥜", p: 6, l: 15, g: 8 }
   ]},
+  feculents: { titre: "🍚 Féculents", items: [
+    { nom: "Riz blanc", portion: "1 assiette (180 g cuit)", ico: "🍚", p: 5, l: 1, g: 50 },
+    { nom: "Riz complet", portion: "1 assiette (180 g cuit)", ico: "🍚", p: 5, l: 2, g: 39 },
+    { nom: "Pâtes", portion: "1 assiette (200 g cuites)", ico: "🍝", p: 12, l: 2, g: 58 },
+    { nom: "Pâtes carbonara", portion: "1 assiette", ico: "🍝", p: 20, l: 24, g: 60 },
+    { nom: "Pommes de terre vapeur", portion: "3 petites (200 g)", ico: "🥔", p: 4, l: 0, g: 36 },
+    { nom: "Purée de pommes de terre", portion: "1 assiette (200 g)", ico: "🥔", p: 4, l: 8, g: 30 },
+    { nom: "Quinoa", portion: "1 assiette (180 g cuit)", ico: "🍚", p: 8, l: 4, g: 38 },
+    { nom: "Semoule", portion: "1 assiette (180 g cuite)", ico: "🍚", p: 6, l: 1, g: 40 },
+    { nom: "Pain complet", portion: "2 tranches (80 g)", ico: "🍞", p: 7, l: 2, g: 35 },
+    { nom: "Céréales du petit-déjeuner", portion: "1 bol (40 g)", ico: "🥣", p: 3, l: 2, g: 30 }
+  ]},
+  proteines: { titre: "🍗 Protéines", items: [
+    { nom: "Poulet rôti", portion: "1 blanc (150 g)", ico: "🍗", p: 42, l: 5, g: 0 },
+    { nom: "Steak haché", portion: "1 steak (125 g)", ico: "🥩", p: 25, l: 16, g: 0 },
+    { nom: "Bœuf grillé", portion: "1 portion (150 g)", ico: "🥩", p: 38, l: 12, g: 0 },
+    { nom: "Poisson blanc", portion: "1 filet (150 g)", ico: "🐟", p: 32, l: 3, g: 0 },
+    { nom: "Saumon", portion: "1 pavé (150 g)", ico: "🐟", p: 31, l: 20, g: 0 },
+    { nom: "Thon au naturel", portion: "1 petite boîte (140 g)", ico: "🐟", p: 34, l: 1, g: 0 },
+    { nom: "Œufs", portion: "2 œufs", ico: "🥚", p: 13, l: 10, g: 1 },
+    { nom: "Omelette", portion: "2 œufs", ico: "🍳", p: 15, l: 14, g: 2 },
+    { nom: "Lentilles", portion: "1 assiette (200 g cuites)", ico: "🍲", p: 18, l: 1, g: 32 },
+    { nom: "Pois chiches", portion: "1 assiette (150 g cuits)", ico: "🫘", p: 12, l: 4, g: 30 },
+    { nom: "Tofu", portion: "1 portion (150 g)", ico: "🧊", p: 18, l: 9, g: 3 }
+  ]},
+  plats: { titre: "🍽️ Plats composés", items: [
+    { nom: "Hamburger-frites", portion: "1 menu", ico: "🍔", p: 30, l: 45, g: 85 },
+    { nom: "Pizza margherita", portion: "½ pizza (250 g)", ico: "🍕", p: 25, l: 22, g: 75 },
+    { nom: "Pizza 4 fromages", portion: "½ pizza (250 g)", ico: "🍕", p: 28, l: 30, g: 70 },
+    { nom: "Salade, tomates et steak", portion: "1 assiette", ico: "🥗", p: 26, l: 22, g: 8 },
+    { nom: "Poulet et riz", portion: "1 assiette", ico: "🍛", p: 35, l: 10, g: 62 },
+    { nom: "Couscous", portion: "1 assiette", ico: "🍲", p: 28, l: 16, g: 70 },
+    { nom: "Lasagnes", portion: "1 part", ico: "🍝", p: 25, l: 22, g: 48 },
+    { nom: "Poisson et légumes", portion: "1 assiette", ico: "🐟", p: 32, l: 10, g: 22 },
+    { nom: "Haricots verts avec pâtes", portion: "1 assiette", ico: "🍝", p: 13, l: 8, g: 60 },
+    { nom: "Sandwich jambon-fromage", portion: "1 sandwich", ico: "🥪", p: 25, l: 18, g: 45 }
+  ]},
+  produits_laitiers: { titre: "🧀 Produits laitiers", items: [
+    { nom: "Yaourt nature", portion: "1 pot (125 g)", ico: "🥣", p: 5, l: 4, g: 6 },
+    { nom: "Yaourt aux fruits", portion: "1 pot (125 g)", ico: "🥣", p: 4, l: 3, g: 18 },
+    { nom: "Fromage", portion: "1 portion (30 g)", ico: "🧀", p: 7, l: 9, g: 0 },
+    { nom: "Fromage blanc", portion: "1 bol (150 g)", ico: "🥣", p: 12, l: 3, g: 6 },
+    { nom: "Emmental râpé", portion: "30 g", ico: "🧀", p: 9, l: 9, g: 0 },
+    { nom: "Dessert lacté", portion: "1 pot (125 g)", ico: "🍮", p: 4, l: 5, g: 20 }
+  ]},
+  desserts: { titre: "🍰 Desserts et gourmandises", items: [
+    { nom: "Glace", portion: "2 boules", ico: "🍦", p: 3, l: 9, g: 24 },
+    { nom: "Gâteau au chocolat", portion: "1 part", ico: "🍰", p: 5, l: 18, g: 40 },
+    { nom: "Tarte aux pommes", portion: "1 part", ico: "🥧", p: 3, l: 12, g: 35 },
+    { nom: "Crêpe au sucre", portion: "1 crêpe", ico: "🥞", p: 5, l: 7, g: 25 },
+    { nom: "Pain au chocolat", portion: "1 pièce", ico: "🥐", p: 5, l: 13, g: 26 },
+    { nom: "Biscuits", portion: "4 biscuits (30 g)", ico: "🍪", p: 3, l: 7, g: 22 },
+    { nom: "Chocolat", portion: "4 carrés (20 g)", ico: "🍫", p: 2, l: 7, g: 9 },
+    { nom: "Bonbons", portion: "1 poignée (50 g)", ico: "🍬", p: 0, l: 0, g: 39 },
+    { nom: "Pop-corn", portion: "1 bol (30 g)", ico: "🍿", p: 3, l: 5, g: 18 }
+  ]}
 };
 
 /* Repères nutritionnels quotidiens (en grammes) */
@@ -291,6 +366,7 @@ let tot = { p: 0, l: 0, g: 0 };
 let historique = [];           // { item, q }
 let sexe = "fille";
 let quantite = 1;
+let recherche = "";
 
 const $ = id => document.getElementById(id);
 const borne = x => Math.max(0, Math.min(1, x));
@@ -302,14 +378,21 @@ function construirePlateau() {
   const cats = $("cats");
   cats.innerHTML = "";
   const prefixe = quantite === 1 ? "" : (quantite === 0.5 ? "½ × " : "2 × ");
+  let resultats = 0;
   for (const cle in MENU) {
     const cat = MENU[cle];
+    const filtrés = cat.items.filter(item => {
+      const texte = `${item.nom} ${item.portion} ${cat.titre}`.toLocaleLowerCase("fr-FR");
+      return !recherche || texte.includes(recherche);
+    });
+    if (!filtrés.length) continue;
+    resultats += filtrés.length;
     const div = document.createElement("div");
     div.className = "cat";
     div.innerHTML = `<h3>${cat.titre}</h3>`;
     const items = document.createElement("div");
     items.className = "items";
-    cat.items.forEach(item => {
+    filtrés.forEach(item => {
       const btn = document.createElement("button");
       btn.className = "item";
       btn.innerHTML = `
@@ -329,6 +412,7 @@ function construirePlateau() {
     div.appendChild(items);
     cats.appendChild(div);
   }
+  if (!resultats) cats.innerHTML = '<div class="catalogue-empty">Aucun aliment ou plat ne correspond à cette recherche.</div>';
 }
 
 function construireJauges() {
@@ -392,6 +476,12 @@ function choisirSexe(s) {
   $("btnGarcon").classList.toggle("actif", s === "garcon");
   miseAJour();
 }
+
+const champRecherche = $("recherche");
+champRecherche.addEventListener("input", () => {
+  recherche = champRecherche.value.trim().toLocaleLowerCase("fr-FR");
+  construirePlateau();
+});
 
 function choisirQuantite(q) {
   quantite = q;
