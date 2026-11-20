@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compose l'assiette de Tom</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,#fdf3e7,#e9f4ff);color:#2b2b2b;min-height:100vh;padding:14px}
+  button{font-family:inherit;color:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}
+  header{text-align:center;margin-bottom:12px}
+  header h1{font-size:1.9rem}
+  header p{color:#555;font-size:.95rem;margin-top:4px}
+  .layout{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:16px;max-width:1300px;margin:0 auto;align-items:start}
+  .panel{border-radius:18px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+  .pantry{background:#fff7ed;border:3px solid #fb923c}
+  .platePanel{background:#eef6ff;border:3px solid #60a5fa;display:flex;flex-direction:column}
+  .platePanel > * + *{margin-top:10px}
+  .panel h2{text-align:center;font-size:1.25rem;margin-bottom:4px}
+  .hint{text-align:center;font-size:.82rem;color:#666;margin-bottom:10px}
+
+  /* ---------- Aliments ---------- */
+  .foods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .food{background:#fff;border:none;border-radius:12px;padding:8px 4px;cursor:pointer;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.1);
+        transition:transform .15s,box-shadow .15s,opacity .3s}
+  .food:active{transform:scale(.94)}
+  .food:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+  .food .emo{font-size:2rem;line-height:1.15}
+  .food .name{font-size:.76rem;font-weight:600;text-align:center;line-height:1.15;margin-top:2px;word-break:break-word}
+
+  /* ---------- Assiette ---------- */
+  .plate{position:relative;width:100%;max-width:250px;margin:0 auto;border-radius:50%;
+  background:radial-gradient(circle,#ffffff 0,#ffffff 57%,#e2e8f0 58%,#e2e8f0 61%,#f8fafc 62%,#f8fafc 100%);
+         border:3px solid #cbd5e1;box-shadow:0 8px 18px rgba(0,0,0,.12)}
+  .plate::before{content:'';display:block;padding-top:100%}
+  .plate .empty{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:.9rem;text-align:center;padding:28%}
+  .pitem{position:absolute;transform:translate(-50%,-50%);font-size:2.3rem;background:none;border:none;padding:0;cursor:pointer;line-height:1;transition:filter .15s}
+  .pitem.new{animation:drop .35s ease-out}
+  @keyframes drop{0%{transform:translate(-50%,-140%) scale(.4);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  .plate-info{text-align:center;font-size:.9rem;font-weight:600;color:#334155}
+  .plate-info small{display:block;font-weight:400;color:#64748b;font-size:.78rem}
+  .plate-btns{display:flex;justify-content:center;flex-wrap:wrap;margin:-4px}
+  .plate-btns .btn{margin:4px}
+  .history h3{font-size:1rem;margin-bottom:6px}
+  #history{list-style:none;max-height:190px;overflow-y:auto}
+  #history li{font-size:.82rem;padding:6px 10px;border-radius:8px;animation:pop .5s;margin-bottom:5px}
+  #history li.ok{background:#dcfce7}
+  #history li.ko{background:#fee2e2}
+
+  /* ---------- Centre ---------- */
+  .center{background:#fff;display:flex;flex-direction:column;align-items:center;position:relative}
+  .center > * + *{margin-top:10px}
+  .top{display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap}
+  .weight{font-size:2rem;font-weight:800}
+  .imc{font-size:.9rem;color:#666}
+  .badge{padding:6px 12px;border-radius:999px;font-weight:700;font-size:.9rem;color:#fff;transition:background .4s}
+  #danger{display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.92rem;background:#fff1f2;border:2px solid #fecdd3;border-radius:12px;padding:6px 12px;width:100%;flex-wrap:wrap;text-align:center}
+  #danger .slots{font-size:1.35rem;letter-spacing:3px;margin:0 8px}
+  .stage{position:relative;width:100%;display:flex;justify-content:center}
+  #man{display:block;width:100%;max-width:300px;height:auto;transform-origin:50% 60%;overflow:visible}
+  .bars{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+  .bar label{font-size:.8rem;font-weight:600;display:flex;justify-content:space-between}
+  .track{height:10px;background:#eee;border-radius:99px;overflow:hidden;margin-top:3px}
+  .fill{height:100%;border-radius:99px;transition:width .4s,background .4s}
+  #fact{width:100%;min-height:62px;background:#f6f6f9;border-left:5px solid #999;border-radius:10px;padding:10px 12px;font-size:.9rem}
+  #fact b{display:block;margin-bottom:2px}
+  .controls{display:flex;align-items:center;flex-wrap:wrap;justify-content:center}
+  .controls > *{margin:4px 6px}
+  .count{font-weight:700;font-size:.95rem}
+  .btn{background:#3b82f6;color:#fff;border:none;padding:10px 16px;border-radius:12px;font-size:.98rem;font-weight:700;cursor:pointer;box-shadow:0 3px 8px rgba(59,130,246,.35)}
+  .btn.green{background:#16a34a;box-shadow:0 3px 8px rgba(22,163,74,.35)}
+  .btn.grey{background:#94a3b8;box-shadow:none}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .journal{width:100%}
+  .journal h3{font-size:1rem;margin-bottom:6px}
+  #log{list-style:none;max-height:150px;overflow-y:auto}
+  #log li{font-size:.85rem;padding:6px 10px;border-radius:8px;animation:pop .5s;margin-bottom:5px}
+  #log li.bad{background:#ffe3df}
+  #log li.good{background:#dff5e3}
+  #log li.info{background:#eef2ff}
+  #log li.thin{background:#dbeafe}
+  @keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+  .flyer{position:fixed;left:0;top:0;font-size:2.2rem;line-height:1;pointer-events:none;z-index:999}
+  .msg{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:8px 16px;border-radius:10px;font-size:.9rem;z-index:1002;animation:pop .3s;max-width:90vw;text-align:center}
+  .delta{position:absolute;top:35%;left:50%;font-weight:800;font-size:1.5rem;pointer-events:none;animation:up 1.2s forwards;z-index:7;white-space:nowrap}
+  @keyframes up{0%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-70px);opacity:0}}
+  .drop{animation:drip 1.1s infinite}
+  .drop:nth-child(2){animation-delay:.4s}.drop:nth-child(3){animation-delay:.7s}
+  @keyframes drip{0%{transform:translateY(0);opacity:1}100%{transform:translateY(16px);opacity:0}}
+  .pulse{transform-box:fill-box;transform-origin:center;animation:pulse .55s infinite}
+  @keyframes pulse{50%{transform:scale(1.35)}}
+  .twinkle{animation:tw 1.2s infinite}
+  .twinkle:nth-child(2){animation-delay:.4s}.twinkle:nth-child(3){animation-delay:.8s}
+  @keyframes tw{50%{opacity:.2}}
+  .bump{animation:bump .35s}
+  @keyframes bump{50%{transform:scale(1.03)}}
+  .shake{animation:shake .12s infinite}
+  @keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-3px,1px)}50%{transform:translate(2px,-2px)}75%{transform:translate(-1px,2px)}}
+  .note{max-width:1300px;margin:14px auto 0;background:#fff8db;border:2px dashed #e0b400;border-radius:12px;padding:10px 14px;font-size:.85rem}
+
+  /* Survol uniquement avec une souris (évite les effets « collés » sur écran tactile) */
+  @media (hover:hover) and (pointer:fine){
+    .food:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 6px 14px rgba(0,0,0,.15)}
+    .food:disabled:hover{transform:none;box-shadow:none}
+    .pitem:hover{filter:drop-shadow(0 0 5px #ef4444)}
+    .btn:hover{background:#2563eb}
+    .btn.green:hover{background:#15803d}
+    .btn.grey:hover{background:#64748b}
+  }
+
+  /* ---------- Explosion ---------- */
+  #fx{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1000}
+  #flash{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;opacity:0;pointer-events:none;z-index:1001}
+  .overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:none;z-index:999;background:rgba(255,255,255,.35);padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .overlay.show{display:flex}
+  .end-card{margin:auto;width:100%;background:#fff;border-radius:24px;padding:24px 28px;max-width:560px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25);animation:boomIn .7s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes boomIn{0%{transform:scale(.3) rotate(-8deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+  .rainbow{width:260px;height:130px;margin:0 auto 4px;
+    background:radial-gradient(circle 130px at 50% 100%,transparent 45%,#8b5cf6 45%,#8b5cf6 54%,#3b82f6 54%,#3b82f6 63%,#22c55e 63%,#22c55e 72%,#facc15 72%,#facc15 81%,#f97316 81%,#f97316 90%,#ef4444 90%,#ef4444 99%,transparent 99%)}
+  .end-card h2{font-size:2.2rem;font-weight:900;margin-bottom:8px;line-height:1.2}
+  .end-card h2 .grad{background-image:linear-gradient(90deg,#ef4444,#f97316,#facc15,#22c55e,#3b82f6,#8b5cf6);
+    -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  .end-card p{font-size:.95rem;color:#444;margin-bottom:10px}
+  .end-card .small{font-size:.82rem;color:#666;background:#f6f6f9;border-radius:10px;padding:8px 10px;text-align:left}
+  .end-card .btns{display:flex;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .end-card .btns .btn{margin:5px}
+
+  /* ---------- Fonte + piscine ---------- */
+  #pool{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:300px;height:auto;display:none;pointer-events:none;overflow:visible}
+  #pool.show{display:block}
+  .end-card.melt h2 .grad{background-image:linear-gradient(90deg,#0ea5e9,#22d3ee,#a78bfa,#f472b6)}
+  .end-card .help{background:#e0f2fe;border-radius:10px;padding:8px 10px;font-size:.85rem;color:#0c4a6e;margin-top:8px;text-align:left}
+
+  /* ---------- Tablettes et téléphones ---------- */
+  @media (max-width:900px){
+    body{padding:8px 8px 0}
+    header h1{font-size:1.4rem}
+    header p{font-size:.85rem}
+    .layout{grid-template-columns:1fr;gap:10px}
+    .center{order:-1}
+    #man,#pool{max-width:220px}
+    .weight{font-size:1.6rem}
+    .foods{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
+    .food .emo{font-size:1.8rem}
+    .food .name{font-size:.72rem}
+
+    /* L'assiette reste collée en bas de l'écran pendant qu'on choisit les aliments */
+    .platePanel{position:-webkit-sticky;position:sticky;bottom:0;z-index:50;
+      display:grid;grid-template-columns:110px 1fr;grid-template-areas:"plate title" "plate info" "plate btns";
+      gap:4px 12px;align-items:center;padding:8px 10px;border-radius:16px 16px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.18)}
+    .platePanel > * + *{margin-top:0}
+    .platePanel h2{grid-area:title;font-size:1rem;text-align:left;margin:0}
+    .plate{grid-area:plate;width:110px;max-width:110px}
+    .plate .empty{font-size:.68rem;padding:16%}
+    .pitem{font-size:1.45rem}
+    .plate-info{grid-area:info;text-align:left;font-size:.85rem}
+    .plate-info small{display:none}
+    .plate-btns{grid-area:btns;justify-content:flex-start}
+    .plate-btns .btn{padding:8px 12px;font-size:.88rem}
+    .history{display:none}
+    .note{margin-bottom:12px}
+  }
+  @media (max-width:480px){
+    .overlay{padding:10px}
+    .end-card{padding:18px 16px}
+    .end-card h2{font-size:1.6rem}
+    .rainbow{width:200px;height:100px;
+      background:radial-gradient(circle 100px at 50% 100%,transparent 45%,#8b5cf6 45%,#8b5cf6 54%,#3b82f6 54%,#3b82f6 63%,#22c55e 63%,#22c55e 72%,#facc15 72%,#facc15 81%,#f97316 81%,#f97316 90%,#ef4444 90%,#ef4444 99%,transparent 99%)}
+    .bars{gap:6px 10px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍽️ Compose l'assiette de Tom</h1>
+  <p>Choisis des aliments pour composer son assiette, puis sers-la. Attention : au bout de <b>4 assiettes mal équilibrées</b>, Tom explose !</p>
+</header>
+
+<div class="layout">
+  <!-- ALIMENTS -->
+  <section class="panel pantry">
+    <h2>🛒 Aliments</h2>
+    <p class="hint">Touche un aliment pour l'ajouter à l'assiette (6 maximum).</p>
+    <div class="foods" id="foods"></div>
+  </section>
+
+  <!-- TOM -->
+  <section class="panel center">
+    <div class="top">
+      <div>
+ <div class="weight" id="weight">72.0 kg</div>
+        <div class="imc" id="imc">IMC : 23.5 (taille 1,75 m)</div>
+      </div>
+      <div class="badge" id="badge">Corpulence normale</div>
+    </div>
+
+    <div id="danger">Assiettes déséquilibrées : <span class="slots" id="slots">⚪⚪⚪⚪</span> <span id="badTxt">0/4</span></div>
+
+    <div class="stage" id="stage">
+      <svg id="man" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+        <g id="body">
+          <ellipse cx="150" cy="488" rx="80" ry="8" fill="rgba(0,0,0,.12)"/>
+   <line id="legL" stroke="#374151" stroke-linecap="round"/>
+          <line id="legR" stroke="#374151" stroke-linecap="round"/>
+          <ellipse id="shoeL" fill="#111827"/>
+   <ellipse id="shoeR" fill="#111827"/>
+   <g id="knees" stroke="#f59e0b" stroke-width="4" fill="none" stroke-linecap="round">
+     <polyline id="kneeL"/><polyline id="kneeR"/>
+   </g>
+          <path id="torso" fill="#3b82f6"/>
+          <ellipse id="belly" fill="rgba(0,0,0,.08)"/>
+   <circle id="navel" fill="rgba(0,0,0,.35)"/>
+          <rect id="belt" fill="#1f2937" rx="4"/>
+          <rect id="buckle" fill="#fbbf24" rx="2"/>
+   <line id="armL" stroke-linecap="round"/>
+   <line id="armR" stroke-linecap="round"/>
+   <line id="sleeveL" stroke="#3b82f6" stroke-linecap="round"/>
+   <line id="sleeveR" stroke="#3b82f6" stroke-linecap="round"/>
+   <circle id="handL"/><circle id="handR"/>
+   <g id="heartAlert">
+     <path class="pulse" d="M0,4 C0,-2 -8,-4 -10,2 C-12,8 0,14 0,18 C0,14 12,8 10,2 C8,-4 0,-2 0,4 Z" fill="#ef4444" stroke="#fff" stroke-width="1.5"/>
+   </g>
+          <rect id="neck"/>
+   <circle id="earL"/><circle id="earR"/>
+          <ellipse id="head"/>
+          <ellipse id="chin" stroke="rgba(0,0,0,.18)" stroke-width="1.5"/>
+   <path id="hair" fill="#4b2e1e"/>
+   <ellipse id="blushL" fill="#ff5a5a"/><ellipse id="blushR" fill="#ff5a5a"/>
+          <path id="cheekL" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path id="cheekR" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none" stroke-linecap="round"/>
+   <line id="browL" stroke="#4b2e1e" stroke-width="3" stroke-linecap="round"/>
+   <line id="browR" stroke="#4b2e1e" stroke-width="3" stroke-linecap="round"/>
+          <ellipse id="eyeL" fill="#222"/><ellipse id="eyeR" fill="#222"/>
+          <path id="bagL" stroke="#7c3aed" stroke-width="2" fill="none"/>
+   <path id="bagR" stroke="#7c3aed" stroke-width="2" fill="none"/>
+   <path id="nose" stroke="rgba(0,0,0,.3)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path id="mouth" stroke="#7a2e2e" stroke-width="3" stroke-linecap="round"/>
+   <g id="acne" fill="#e0525c">
+            <circle r="2.6"/><circle r="2.2"/><circle r="2.4"/><circle r="2"/><circle r="2.3"/>
+          </g>
+   <g id="sweat" fill="#60a5fa">
+            <ellipse class="drop" rx="3" ry="5"/><ellipse class="drop" rx="3" ry="5"/><ellipse class="drop" rx="3" ry="5"/>
+   </g>
+   <g id="sparkles" font-size="22">
+     <text class="twinkle" x="40" y="70">✨</text>
+     <text class="twinkle" x="235" y="110">✨</text>
+     <text class="twinkle" x="250" y="250">✨</text>
+   </g>
+ </g>
+      </svg>
+
+      <!-- Piscine (fin alternative) -->
+      <svg id="pool" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+   <radialGradient id="water" cx="50%" cy="35%" r="75%">
+     <stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0284c7"/>
+   </radialGradient>
+        </defs>
+        <ellipse id="poolRim" cx="150" cy="405" rx="0" ry="0" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="3"/>
+        <ellipse id="poolWater" cx="150" cy="405" rx="0" ry="0" fill="url(#water) #0ea5e9"/>
+ <g id="poolDeco" opacity="0">
+   <path d="M244,338 V370 M256,338 V370 M244,348 H256 M244,358 H256" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+   <text x="6" y="338" font-size="24">⛱️</text>
+          <text x="218" y="432" font-size="18">🦆</text>
+        </g>
+        <g id="ripples" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"></g>
+        <g id="unicorns"></g>
+        <g id="splash" fill="#bae6fd"></g>
+      </svg>
+    </div>
+
+    <div class="bars">
+      <div class="bar"><label>⚡ Énergie <span id="vEnergie"></span></label><div class="track"><div class="fill" id="bEnergie"></div></div></div>
+      <div class="bar"><label>❤️ Santé du cœur <span id="vCoeur"></span></label><div class="track"><div class="fill" id="bCoeur"></div></div></div>
+      <div class="bar"><label>🧴 Peau <span id="vPeau"></span></label><div class="track"><div class="fill" id="bPeau"></div></div></div>
+      <div class="bar"><label>🙂 Moral <span id="vHumeur"></span></label><div class="track"><div class="fill" id="bHumeur"></div></div></div>
+    </div>
+
+    <div id="fact"></div>
+
+    <div class="controls">
+      <span class="count">🍽️ <span id="cPlates">0</span> servie(s)</span>
+      <span class="count">✅ <span id="cOk">0</span></span>
+      <span class="count">❌ <span id="cBad">0</span></span>
+      <button class="btn" id="reset">🔄 Recommencer</button>
+    </div>
+
+    <div class="journal">
+      <h3>📋 Changements observés</h3>
+      <ul id="log"></ul>
+    </div>
+  </section>
+
+  <!-- ASSIETTE -->
+  <section class="panel platePanel">
+    <h2>🍽️ Assiette n°<span id="plateNum">1</span></h2>
+    <div class="plate" id="plate"></div>
+    <div class="plate-info">
+      <span id="nbItems">0</span>/6 aliments
+      <small>Touche un aliment de l'assiette pour le retirer.</small>
+    </div>
+    <div class="plate-btns">
+      <button class="btn green" id="serve">🍴 Servir à Tom</button>
+      <button class="btn grey" id="clear">🗑️ Vider</button>
+    </div>
+    <div class="history">
+      <h3>📜 Assiettes servies</h3>
+      <ul id="history"></ul>
+    </div>
+  </section>
+</div>
+
+<div class="note">
+  ⚠️ <b>Simulation accélérée et simplifiée :</b> chaque assiette représente ce type de repas <b>pris régulièrement pendant plusieurs semaines</b>.
+  Un repas déséquilibré de temps en temps n'est pas grave : ce sont les <b>habitudes</b> qui comptent. Le poids dépend aussi de la génétique, du sommeil, de l'activité physique et du stress.
+</div>
+
+<!-- Explosion -->
+<canvas id="fx"></canvas>
+<div id="flash"></div>
+<div class="overlay" id="boom">
+  <div class="end-card">
+    <div class="rainbow"></div>
+    <h2>💥 <span class="grad">BOUM !</span> 🦄</h2>
+    <p>Quatrième assiette mal équilibrée… Tom a explosé en confettis et en arcs-en-ciel !</p>
+    <p id="boomStats"></p>
+    <p class="small">😄 Pas de panique : dans la vraie vie, personne n'explose ! Mais des repas déséquilibrés pendant des années ont de vraies conséquences : diabète de type 2, maladies du cœur, fatigue chronique…<br><br>
+    🥗 <b>Repère pour une assiette équilibrée :</b> environ ½ de légumes, ¼ de féculents, ¼ de protéines, de l'eau pour boire, et pas trop de gras ni de sucre.</p>
+    <div class="btns"><button class="btn" data-reset>🔄 Recommencer</button></div>
+  </div>
+</div>
+
+<!-- Fonte -->
+<div class="overlay" id="meltEnd">
+  <div class="end-card melt">
+    <h2>😵 <span class="grad">Tom a fondu…</span> 🏊🦄</h2>
+    <p>Quatre assiettes déséquilibrées, même avec des aliments sains : Tom n'a pas eu assez d'énergie et il a fondu… Il est devenu une piscine pour licornes !</p>
+    <p id="meltStats"></p>
+    <p class="small">😄 Pas de panique : dans la vraie vie, personne ne fond ! Mais <b>manger sain ≠ manger trop peu</b>. À 16 ans, le corps a besoin d'assez d'énergie pour grandir, se concentrer et faire du sport.<br><br>
+    🥗 <b>Repère pour une assiette équilibrée :</b> environ ½ de légumes, ¼ de féculents, ¼ de protéines, et de l'eau pour boire.</p>
+    <p class="help">💬 Si toi ou quelqu'un que tu connais a un rapport compliqué avec la nourriture, tu peux en parler à l'infirmier·e scolaire ou appeler <b>Fil Santé Jeunes</b> au <b>0 800 235 236</b> (gratuit et anonyme).</p>
+    <div class="btns">
+      <button class="btn" data-reset>🔄 Recommencer</button>
+      <button class="btn grey" id="watchPool">🦄 Regarder la piscine</button>
+    </div>
+  </div>
+</div>
+
+<script type="06b1d57ad22fcd6f0f824e52-text/javascript">
+/* ==========================================================
+   ALIMENTS (les groupes sont cachés aux élèves)
+   Emojis choisis pour s'afficher aussi sur les appareils un peu anciens
+   ========================================================== */
+const INGR = [
+  {emo:'🍅',name:'Tomate',kcal:20,tags:['leg']},
+  {emo:'🥬',name:'Salade verte',kcal:15,tags:['leg']},
+  {emo:'🥦',name:'Brocoli',kcal:35,tags:['leg']},
+  {emo:'🥕',name:'Carottes',kcal:35,tags:['leg']},
+  {emo:'🥒',name:'Concombre',kcal:20,tags:['leg']},
+  {emo:'🍎',name:'Pomme',kcal:80,tags:['leg']},
+  {emo:'🍌',name:'Banane',kcal:100,tags:['leg']},
+  {emo:'🥑',name:'Avocat',kcal:160,tags:['leg']},
+  {emo:'🍚',name:'Riz',kcal:200,tags:['fec']},
+  {emo:'🍝',name:'Pâtes',kcal:220,tags:['fec']},
+  {emo:'🥖',name:'Pain',kcal:140,tags:['fec']},
+  {emo:'🥔',name:'Pommes de terre',kcal:130,tags:['fec']},
+  {emo:'🍟',name:'Frites',kcal:400,tags:['fec','gras']},
+  {emo:'🍗',name:'Poulet',kcal:180,tags:['prot']},
+  {emo:'🐟',name:'Poisson',kcal:170,tags:['prot']},
+  {emo:'🥚',name:'Œuf',kcal:80,tags:['prot']},
+  {emo:'🍲',name:'Lentilles',kcal:150,tags:['prot','fec']},
+  {emo:'🥩',name:'Steak',kcal:250,tags:['prot']},
+  {emo:'🌭',name:'Saucisse',kcal:280,tags:['prot','gras']},
+  {emo:'🥓',name:'Bacon',kcal:220,tags:['prot','gras']},
+  {emo:'🧀',name:'Fromage',kcal:120,tags:['lait']},
+  {emo:'🥛',name:'Lait / yaourt',kcal:80,tags:['lait']},
+  {emo:'🧈',name:'Beurre',kcal:100,tags:['gras']},
+  {emo:'🍫',name:'Chocolat',kcal:250,tags:['sucre']},
+  {emo:'🍩',name:'Donut',kcal:280,tags:['sucre','gras']},
+  {emo:'🍰',name:'Gâteau',kcal:350,tags:['sucre','gras']},
+  {emo:'🍬',name:'Bonbons',kcal:150,tags:['sucre']},
+  {emo:'🥤',name:'Soda',kcal:140,tags:['sucre']},
+  {emo:'💧',name:'Eau',kcal:0,tags:['eau']}
+];
+
+const PB_FX = {
+  leg:  {peau:-8, energie:-4},
+  fec:  {energie:-10},
+  prot: {energie:-5, humeur:-6},
+  gras: {coeur:-12, peau:-6},
+  sucre:{energie:-8, peau:-8, humeur:-4},
+  trop: {coeur:-6, energie:-6},
+  peu:  {energie:-10, humeur:-8}
+};
+
+const START = {poids:72, energie:70, coeur:75, peau:70, humeur:70};
+const STATS = ['energie','coeur','peau','humeur'];
+const TAILLE = 1.75, POIDS_MIN = 48, POIDS_MAX = 130, MAX_ITEMS = 6, MAX_BAD = 4;
+
+let state = {...START}, disp = {...START};
+let plate = [], justAdded = false, busy = false;
+let plates = 0, okCount = 0, bad = 0, badHealthy = 0, pbCount = {};
+let chompUntil = 0, over = false, timers = [], gen = 0, dirty = true;
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const imcOf = p => p / (TAILLE*TAILLE);
+const isMobile = () => window.matchMedia('(max-width:900px)').matches;
+function set(id, attrs){ const el = typeof id==='string' ? $(id) : id; for(const k in attrs) el.setAttribute(k, attrs[k]); }
+function later(fn, ms){ timers.push(setTimeout(fn, ms)); }
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){ const j = Math.random()*(i+1)|0; const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function toast(t){ const m = document.createElement('div'); m.className='msg'; m.textContent=t; document.body.appendChild(m); setTimeout(()=>m.remove(), 1600); }
+
+/* ---------- Changements physiques ---------- */
+const CHANGES = [
+  {id:'ventre', test:s=>imcOf(s.poids)>=25, on:"👖 Surpoids : le ventre s'arrondit et les vêtements serrent.", off:"✅ Le ventre diminue : retour à une corpulence normale."},
+  {id:'menton', test:s=>s.poids>=88, on:"😶 Les joues s'arrondissent et un double menton apparaît.", off:"✅ Le double menton disparaît."},
+  {id:'sueur',  test:s=>imcOf(s.poids)>=30, on:"💦 Obésité : il transpire et s'essouffle au moindre effort.", off:"✅ Il respire mieux et transpire moins."},
+  {id:'genoux', test:s=>imcOf(s.poids)>=35, on:"⚡ Douleurs aux genoux et au dos : les articulations souffrent.", off:"✅ Les articulations sont soulagées."},
+  {id:'maigre', type:'thin', test:s=>imcOf(s.poids)<18.5, on:"⚠️ Maigreur : il a souvent froid, se fatigue vite et perd du muscle.", off:"✅ Il reprend du poids : retour à une corpulence normale."},
+  {id:'fatigue',test:s=>s.energie<40, on:"😴 Fatigue et cernes : il manque d'énergie.", off:"✅ Il retrouve de l'énergie, les cernes s'estompent."},
+  {id:'peau',   test:s=>s.peau<45, on:"🔴 Peau terne et boutons.", off:"✅ Sa peau redevient plus nette."},
+  {id:'coeur',  test:s=>s.coeur<40, on:"💔 Tension et cholestérol en hausse : risque cardiovasculaire accru.", off:"✅ Son cœur va mieux."},
+  {id:'moral',  test:s=>s.humeur<35, on:"😞 Le moral baisse : l'alimentation joue aussi sur l'humeur et la concentration.", off:"✅ Son moral remonte."},
+  {id:'forme',  test:s=>imcOf(s.poids)>=18.5 && imcOf(s.poids)<25 && s.energie>=85 && s.coeur>=85 && s.peau>=85, on:"✨ Pleine forme : énergie, peau nette et cœur en bonne santé !", off:null}
+];
+let active = new Set();
+function checkChanges(){
+  CHANGES.forEach(c=>{
+    const now = c.test(state), was = active.has(c.id);
+    if(now && !was){ active.add(c.id); addLog(c.on, c.id==='forme' ? 'good' : c.type==='thin' ? 'thin' : 'bad'); }
+    if(!now && was){ active.delete(c.id); if(c.off) addLog(c.off, 'good'); }
+  });
+}
+function addLog(text, cls){
+  const li = document.createElement('li');
+  li.className = cls; li.textContent = text;
+  $('log').insertBefore(li, $('log').firstChild);
+}
+
+/* ---------- Liste des aliments (mélangée) ---------- */
+function buildFoods(){
+  const box = $('foods'); box.innerHTML = '';
+  shuffle(INGR).forEach(food=>{
+    const b = document.createElement('button');
+    b.className = 'food'; b.type = 'button';
+    b.innerHTML = `<span class="emo">${food.emo}</span><span class="name">${food.name}</span>`;
+    b.onclick = () => addToPlate(food);
+    box.appendChild(b);
+  });
+}
+
+/* ---------- Composition de l'assiette ---------- */
+function addToPlate(food){
+  if(over || busy) return;
+  if(plate.length >= MAX_ITEMS){ toast("🍽️ L'assiette est pleine (6 aliments maximum) !"); return; }
+  plate.push(food); justAdded = true;
+  renderPlate();
+}
+function renderPlate(){
+  const box = $('plate'); box.innerHTML = '';
+  if(!plate.length){
+    box.innerHTML = '<div class="empty">Assiette vide<br>Ajoute des aliments</div>';
+  }
+  const n = plate.length;
+  plate.forEach((f,i)=>{
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'pitem' + (justAdded && i===n-1 ? ' new' : '');
+    b.textContent = f.emo; b.title = 'Retirer : ' + f.name;
+    const a = i/n*Math.PI*2 - Math.PI/2, r = n===1 ? 0 : 27;
+    b.style.left = (50 + Math.cos(a)*r) + '%';
+    b.style.top  = (50 + Math.sin(a)*r) + '%';
+    b.onclick = () => { if(busy||over) return; plate.splice(i,1); renderPlate(); };
+    box.appendChild(b);
+  });
+  justAdded = false;
+  $('nbItems').textContent = n;
+  $('plateNum').textContent = plates + 1;
+  $('serve').disabled = !n || busy || !!over;
+  $('clear').disabled = !n || busy || !!over;
+}
+
+/* ---------- Évaluation de l'assiette ---------- */
+function evaluate(items){
+  const c = {leg:0, fec:0, prot:0, lait:0, gras:0, sucre:0};
+  let kcal = 0;
+  items.forEach(it=>{ kcal += it.kcal; it.tags.forEach(t=>{ if(t in c) c[t]++; }); });
+  const pb = [];
+  if(!c.leg)  pb.push('leg');
+  if(!c.fec)  pb.push('fec');
+  if(!c.prot) pb.push('prot');
+  if(c.gras  >= 2) pb.push('gras');
+  if(c.sucre >= 2) pb.push('sucre');
+  if(kcal > 1100) pb.push('trop');
+  else if(kcal < 400) pb.push('peu');
+  return {c, kcal, pb, ok: pb.length===0};
+}
+
+/* ---------- Servir : les aliments volent jusqu'à Tom ---------- */
+function mouthPos(){
+  const svg = $('man'), pt = svg.createSVGPoint(); pt.x = 150; pt.y = 112;
+  return pt.matrixTransform(svg.getScreenCTM());
+}
+function serve(){
+  if(over || busy || !plate.length) return;
+  busy = true;
+  renderPlate();
+  document.querySelectorAll('.food').forEach(b=>b.disabled=true);
+  const myGen = gen;
+  if(isMobile()){
+    // Sur téléphone : on remonte jusqu'à Tom pour voir les aliments arriver
+    const st = $('stage');
+    try { st.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e){ st.scrollIntoView(); }
+    setTimeout(()=>{ if(myGen===gen) launch(); }, 550);
+  } else launch();
+}
+function launch(){
+  const items = plate.slice();
+  const rects = Array.prototype.map.call($('plate').querySelectorAll('.pitem'), e=>e.getBoundingClientRect());
+  plate = []; renderPlate();
+  const m = mouthPos(), myGen = gen;
+  items.forEach((it,i)=>{
+    const r = rects[i], sx = r.left + r.width/2, sy = r.top + r.height/2;
+    const dx = m.x - sx, dy = m.y - sy;
+    const el = document.createElement('div');
+    el.className = 'flyer'; el.textContent = it.emo;
+    document.body.appendChild(el);
+    const base = `translate(${sx}px,${sy}px) translate(-50%,-50%)`;
+    const anim = el.animate([
+      {transform:`${base} translate(0px,0px) scale(1)`, opacity:1},
+      {transform:`${base} translate(${dx*0.5}px,${dy*0.5-80}px) scale(1.25)`, opacity:1},
+      {transform:`${base} translate(${dx}px,${dy}px) scale(.2)`, opacity:.4}
+    ], {duration:700, delay:i*130, easing:'ease-in-out', fill:'both'});
+    anim.onfinish = () => {
+      el.remove();
+      if(myGen !== gen) return;
+      chompUntil = performance.now() + 300;
+      if(i === items.length-1) eat(items);
+    };
+  });
+}
+
+function eat(items){
+  busy = false;
+  const ev = evaluate(items);
+  plates++;
+  const healthy = isHealthy(items);   // uniquement des aliments sains (ni gras ni sucré)
+  if(ev.ok) okCount++;
+  else { bad++; if(healthy) badHealthy++; ev.pb.forEach(k=>pbCount[k]=(pbCount[k]||0)+1); }
+
+  // Effets sur le corps
+  const before = state.poids;
+  const fx = {energie:0, coeur:0, peau:0, humeur:0};
+  if(ev.ok){
+    state.poids += (70 - state.poids) * 0.3;
+    STATS.forEach(k=>fx[k] = 10);
+  } else {
+    // Assiette saine mais déséquilibrée : pas assez d'énergie, Tom maigrit
+    const d = healthy ? -4 : clamp((ev.kcal-750)/130, -2.5, 5) + 0.7*ev.c.gras + 0.7*ev.c.sucre;
+    state.poids = clamp(state.poids + d, POIDS_MIN, POIDS_MAX);
+    STATS.forEach(k=>fx[k] = -4);
+    ev.pb.forEach(p=>{ for(const k in PB_FX[p]) fx[k] += PB_FX[p][k]; });
+  }
+  STATS.forEach(k=>state[k] = clamp(state[k] + fx[k], 0, 100));
+
+  // Affichage du poids
+  const diff = state.poids - before;
+  const txt = Math.abs(diff) < 0.05 ? 'Poids stable' : (diff>0 ? '+' : '') + diff.toFixed(1) + ' kg';
+  const dEl = document.createElement('div');
+  dEl.className = 'delta'; dEl.textContent = txt;
+  dEl.style.color = ev.ok ? '#16a34a' : '#dc2626';
+  $('stage').appendChild(dEl);
+  setTimeout(()=>dEl.remove(), 1200);
+
+  // Résultat de l'assiette (sans détail)
+  const fact = $('fact');
+  fact.style.borderLeftColor = ev.ok ? '#22c55e' : '#ef4444';
+  fact.innerHTML = `<b>${ev.ok ? '✅ Assiette équilibrée !' : `❌ Assiette déséquilibrée (${bad}/${MAX_BAD})`} · ${txt}</b>
+    ${ev.ok ? "Tom se sent en forme !" : "Tom ne se sent pas très bien… Essaie une autre combinaison !"}`;
+
+  // Historique
+  const li = document.createElement('li');
+  li.className = ev.ok ? 'ok' : 'ko';
+  li.textContent = `Assiette ${plates} : ${items.map(i=>i.emo).join('')} · ` +
+    (ev.ok ? '✅ Équilibrée' : '❌ Déséquilibrée');
+  $('history').insertBefore(li, $('history').firstChild);
+
+  $('cPlates').textContent = plates; $('cOk').textContent = okCount; $('cBad').textContent = bad;
+  updateDanger();
+  dirty = true;
+
+  chompUntil = performance.now() + 450;
+  const svg = $('man'); svg.classList.remove('bump'); void svg.getBoundingClientRect(); svg.classList.add('bump');
+  checkChanges();
+
+  if(bad >= MAX_BAD){ later(badHealthy === bad ? melt : explode, 900); return; }
+  if(!ev.ok && bad === MAX_BAD-1) addLog("⚠️ Attention : encore une assiette déséquilibrée et il va arriver quelque chose à Tom !", 'bad');
+  document.querySelectorAll('.food').forEach(b=>b.disabled=false);
+  renderPlate();
+}
+
+function updateDanger(){
+  $('slots').textContent = Array.from({length:MAX_BAD}, (_,i)=> i<bad ? '💣' : '⚪').join('');
+  $('badTxt').textContent = `${bad}/${MAX_BAD}`;
+}
+
+/* ==========================================================
+   EXPLOSION EN CONFETTIS 🦄🌈
+   ========================================================== */
+function explode(){
+  over = 'boom'; dirty = true;
+  document.querySelectorAll('.food').forEach(b=>b.disabled=true);
+  renderPlate();
+  addLog("💥 4 assiettes déséquilibrées : Tom explose en confettis !", 'bad');
+  $('fact').style.borderLeftColor = '#8b5cf6';
+  $('fact').innerHTML = "<b>💥 BOUM !</b>Tom n'a pas supporté autant de repas déséquilibrés…";
+
+  const man = $('man');
+  const inflate = man.animate([
+    {transform:'scale(1,1)'},
+    {transform:'scale(1.15,0.95)', offset:.3},
+    {transform:'scale(0.95,1.15)', offset:.6},
+    {transform:'scale(1.45,1.45)'}
+  ], {duration:1000, easing:'ease-in', fill:'forwards'});
+
+  inflate.onfinish = () => {
+    if(over!=='boom') return;
+    const r = man.getBoundingClientRect();
+    burst(r.left + r.width/2, r.top + r.height*0.45);
+    man.style.visibility = 'hidden';
+    $('flash').animate([{opacity:.9},{opacity:0}], {duration:600});
+    rainUntil = performance.now() + 7000;
+    $('boomStats').innerHTML = `Tom a reçu <b>${plates}</b> assiette(s), dont <b>${okCount}</b> équilibrée(s) et <b>${bad}</b> déséquilibrées. Il pèse <b>${state.poids.toFixed(1)} kg</b>.`;
+    later(()=>$('boom').classList.add('show'), 1600);
+  };
+}
+
+const cv = $('fx'), ctx = cv.getContext('2d');
+let parts = [], rainUntil = 0, fxRunning = false, W = innerWidth, H = innerHeight;
+const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
+const EMOJIS = ['🦄','🌈','🦄','🌈','🦄','⭐','💖'];
+
+// Canvas net sur écrans Retina / Android (densité de pixels limitée à 2 pour rester fluide)
+function resizeFx(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resizeFx); resizeFx();
+
+// Les emojis sont dessinés une seule fois puis réutilisés (beaucoup plus rapide sur téléphone)
+const sprites = {};
+function sprite(e){
+  if(!sprites[e]){
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    x.font = '96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(e, 64, 70);
+    sprites[e] = c;
+  }
+  return sprites[e];
+}
+
+function addPart(x, y, vx, vy, emoji){
+  parts.push({
+    x, y, vx, vy, emoji,
+    rot: Math.random()*Math.PI*2,
+    vr: (Math.random()-.5) * (emoji ? 0.08 : 0.3),
+    size: emoji ? 36 + Math.random()*32 : 7 + Math.random()*8,
+    color: COLORS[Math.random()*COLORS.length|0],
+    phase: Math.random()*Math.PI*2
+  });
+}
+function burst(x, y){
+  const small = W < 700;
+  for(let i=0;i<(small?170:320);i++){
+    const a = Math.random()*Math.PI*2, s = 4 + Math.random()*(small?13:18);
+    addPart(x, y, Math.cos(a)*s, Math.sin(a)*s - 6, null);
+  }
+  for(let i=0;i<(small?28:45);i++){
+    const a = Math.random()*Math.PI*2, s = 4 + Math.random()*(small?10:13);
+    addPart(x, y, Math.cos(a)*s, Math.sin(a)*s - 8, EMOJIS[Math.random()*EMOJIS.length|0]);
+  }
+  if(!fxRunning){ fxRunning = true; requestAnimationFrame(fxLoop); }
+}
+function fxLoop(t){
+  ctx.clearRect(0, 0, W, H);
+  if(t < rainUntil && Math.random() < (W < 700 ? 0.35 : 0.6)){
+    const emo = Math.random() < 0.2 ? EMOJIS[Math.random()*EMOJIS.length|0] : null;
+    addPart(Math.random()*W, -40, (Math.random()-.5)*2, 1 + Math.random()*2, emo);
+  }
+  parts.forEach(p=>{
+    const drag = p.emoji ? 0.985 : 0.96;
+    p.vy += p.emoji ? 0.18 : 0.22;
+    p.vx *= drag; p.vy *= drag;
+    p.x += p.vx + Math.sin(t/220 + p.phase) * (p.emoji ? 0.4 : 1.3);
+    p.y += p.vy;
+    p.rot += p.vr;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    if(p.emoji){
+      ctx.drawImage(sprite(p.emoji), -p.size/2, -p.size/2, p.size, p.size);
+    } else {
+      ctx.scale(1, Math.cos(t/120 + p.phase));
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+    }
+    ctx.restore();
+  });
+  parts = parts.filter(p => p.y < H + 80 && p.x > -100 && p.x < W + 100);
+  if(parts.length || t < rainUntil) requestAnimationFrame(fxLoop);
+  else { fxRunning = false; ctx.clearRect(0, 0, W, H); }
+}
+
+/* ==========================================================
+   FONTE + PISCINE À LICORNES 🏊🦄
+   (si les 4 assiettes déséquilibrées ne contenaient que des aliments sains)
+   ========================================================== */
+const NS = 'http://www.w3.org/2000/svg';
+const S = 0.55, WALK_Y = 345, SPEED = 75, LEG_X = [-19,-9,6,15];
+let unis = [], drops = [], poolStart = 0;
+
+function isHealthy(items){
+  return items.every(i => i.tags.indexOf('gras') < 0 && i.tags.indexOf('sucre') < 0);
+}
+
+function melt(){
+  over = 'melt'; dirty = true;
+  document.querySelectorAll('.food').forEach(b=>b.disabled=true);
+  renderPlate();
+  addLog("😵 4 assiettes déséquilibrées : Tom n'a pas eu assez d'énergie… il fond !", 'thin');
+  $('fact').style.borderLeftColor = '#0ea5e9';
+  $('fact').innerHTML = "<b>😵 Oh non…</b>Tom n'a pas eu assez d'énergie : il est en train de fondre !";
+
+  const man = $('man'), myGen = gen;
+  man.style.transformOrigin = '50% 97%';
+  $('pool').classList.add('show');
+  set('poolDeco',{opacity:0});
+
+  const anim = man.animate([
+    {transform:'scale(1,1)', opacity:1, filter:'saturate(1) hue-rotate(0deg)'},
+    {transform:'scale(1.05,.8)', opacity:.95, filter:'saturate(1.3) hue-rotate(50deg)', offset:.3},
+    {transform:'scale(1.25,.4)', opacity:.7, filter:'saturate(1.7) hue-rotate(120deg)', offset:.7},
+    {transform:'scale(1.6,.02)', opacity:.3, filter:'saturate(2) hue-rotate(170deg)'}
+  ], {duration:2600, easing:'ease-in', fill:'forwards'});
+
+  // La flaque grandit et devient une piscine
+  const t0 = performance.now();
+  (function grow(t){
+    if(myGen !== gen) return;
+    const k = clamp((t-t0)/3200, 0, 1), e = 1 - Math.pow(1-k, 3);
+    set('poolWater',{rx:20+108*e, ry:6+40*e});
+    set('poolRim',{rx:24+116*e, ry:8+47*e, opacity:clamp((k-.5)*2, 0, 1)});
+    if(k < 1) requestAnimationFrame(grow);
+  })(t0);
+
+  anim.onfinish = () => {
+    if(myGen !== gen) return;
+    man.style.visibility = 'hidden';
+    later(()=>{
+      set('poolDeco',{opacity:1});
+      addLog("🏊 Tom est devenu une piscine… et des licornes arrivent pour se baigner !", 'thin');
+      startUnicorns();
+    }, 700);
+    $('meltStats').innerHTML = `Tom a reçu <b>${plates}</b> assiette(s), dont <b>${okCount}</b> équilibrée(s) et <b>${bad}</b> déséquilibrées. Il pesait <b>${state.poids.toFixed(1)} kg</b> avant de fondre.`;
+    later(()=>$('meltEnd').classList.add('show'), 10000);
+  };
+}
+
+/* ---------- Licornes dessinées ---------- */
+const UNI_COLORS = [
+  {body:'#ffffff', mane:['#f472b6','#a78bfa','#60a5fa']},
+  {body:'#fde7f3', mane:['#facc15','#fb923c','#f472b6']},
+  {body:'#ede9fe', mane:['#34d399','#60a5fa','#a78bfa']},
+  {body:'#fff7d6', mane:['#ef4444','#f97316','#22c55e']}
+];
+
+function makeUnicorn(i){
+  const c = UNI_COLORS[i % UNI_COLORS.length], m = c.mane, line = '#d8d4e6';
+  const g = document.createElementNS(NS,'g');
+  // Le découpage (clip) n'est activé qu'au moment où la licorne est dans l'eau :
+  // c'est plus fiable sur Safari qu'un clip modifié en continu.
+  g.innerHTML = `
+    <clipPath id="uclip${i}"><rect x="-80" y="-120" width="160" height="94"/></clipPath>
+    <g class="clipg">
+      <g class="flip">
+        <path d="M-26,-36 C-46,-40 -48,-20 -38,-10 C-36,-22 -31,-27 -26,-29 Z" fill="${m[0]}"/>
+ <path d="M-26,-31 C-42,-28 -43,-13 -33,-6 C-33,-17 -29,-22 -24,-25 Z" fill="${m[1]}"/>
+        ${LEG_X.map(x=>`<rect class="leg" x="${x}" y="-22" width="7" height="22" rx="3" fill="${c.body}" stroke="${line}" stroke-width="1.5"/>`).join('')}
+ <ellipse cx="0" cy="-32" rx="28" ry="16" fill="${c.body}" stroke="${line}" stroke-width="1.5"/>
+ <path d="M13,-42 L27,-64 L41,-57 L26,-30 Z" fill="${c.body}"/>
+ <path d="M28,-70 L30,-83 L36,-71 Z" fill="${c.body}" stroke="${line}" stroke-width="1.5"/>
+        <ellipse cx="38" cy="-62" rx="14" ry="11" fill="${c.body}" stroke="${line}" stroke-width="1.5"/>
+        <ellipse cx="48" cy="-58" rx="7" ry="6" fill="#fbcfe8"/>
+        <circle cx="51" cy="-59" r="1.3" fill="#9d174d"/>
+ <path d="M34,-71 L40,-95 L43,-70 Z" fill="#facc15" stroke="#eab308" stroke-width="1"/>
+        <path d="M36,-78 L42,-80 M37,-85 L41,-87" stroke="#eab308" stroke-width="1"/>
+ <circle cx="26" cy="-71" r="6" fill="${m[0]}"/>
+        <circle cx="21" cy="-61" r="6" fill="${m[1]}"/>
+        <circle cx="17" cy="-51" r="6" fill="${m[2]}"/>
+ <circle cx="14" cy="-42" r="5" fill="${m[0]}"/>
+        <circle cx="40" cy="-64" r="3" fill="#1f2937"/><circle cx="41" cy="-65" r="1" fill="#fff"/>
+ <ellipse cx="36" cy="-56" rx="3.5" ry="2" fill="#f9a8d4" opacity=".85"/>
+        <path d="M44,-54 q3,2.5 6,0" stroke="#9d174d" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+      </g>
+    </g>`;
+  const ripple = document.createElementNS(NS,'ellipse');
+  ripple.setAttribute('opacity', 0);
+  $('ripples').appendChild(ripple);
+  return {idx:i, g, ripple, swimming:false, flip:g.querySelector('.flip'), clipG:g.querySelector('.clipg'), legs:Array.prototype.slice.call(g.querySelectorAll('.leg'))};
+}
+
+function startUnicorns(){
+  $('unicorns').innerHTML = ''; $('splash').innerHTML = ''; $('ripples').innerHTML = '';
+  drops = [];
+  // Ordre d'ajout = du fond vers l'avant
+  const plan = [
+    {from:340, jumpX:185, swimX:175, swimY:385, delay:3600},
+    {from:-40, jumpX:70,  swimX:95,  swimY:395, delay:0},
+    {from:340, jumpX:230, swimX:205, swimY:405, delay:1000},
+    {from:-40, jumpX:120, swimX:140, swimY:425, delay:2400}
+  ];
+  unis = plan.map((p,i)=>{
+    const u = Object.assign({}, p, makeUnicorn(i), {splashed:false});
+    u.g.style.display = 'none';
+    $('unicorns').appendChild(u.g);
+    return u;
+  });
+  poolStart = performance.now();
+  const myGen = gen; let last = poolStart;
+  (function step(t){
+    if(myGen !== gen) return;
+    const dt = Math.min(0.05, (t-last)/1000); last = t;
+    unis.forEach(u=>uniUpdate(u, t));
+    drops = drops.filter(d=>{
+      d.life += dt;
+      if(d.ring){
+        const k = d.life/0.8;
+        if(k >= 1){ d.el.remove(); return false; }
+        set(d.el,{cx:d.x, cy:d.y, rx:8+40*k, ry:3+12*k, opacity:1-k});
+        return true;
+      }
+      if(d.life > 0.9){ d.el.remove(); return false; }
+      d.vy += 280*dt; d.x += d.vx*dt; d.y += d.vy*dt;
+      set(d.el,{cx:d.x, cy:d.y, opacity:1-d.life/0.9});
+      return true;
+    });
+    requestAnimationFrame(step);
+  })(poolStart);
+}
+
+function splash(x, y){
+  for(let i=0;i<18;i++){
+    const c = document.createElementNS(NS,'circle');
+    c.setAttribute('r', 1.5 + Math.random()*2.5);
+    $('splash').appendChild(c);
+    drops.push({el:c, x, y, vx:(Math.random()-.5)*110, vy:-70-Math.random()*100, life:0});
+  }
+  const r = document.createElementNS(NS,'ellipse');
+  set(r,{fill:'none', stroke:'#fff', 'stroke-width':2});
+  $('splash').appendChild(r);
+  drops.push({el:r, x, y, life:0, ring:true});
+}
+
+function uniUpdate(u, t){
+  const lt = (t - poolStart - u.delay) / 1000;
+  if(lt < 0){ u.g.style.display = 'none'; return; }
+  u.g.style.display = '';
+  const side = u.swimX >= u.jumpX ? 1 : -1;
+  const walkDur = Math.abs(u.jumpX - u.from) / SPEED;
+  let x, y, sx = 1, sy = 1, rot = 0, dir = side, legA = 0, swim = false;
+
+  if(lt < walkDur){     // 🚶 elle marche jusqu'au bord
+    x = u.from + (u.jumpX - u.from) * (lt / walkDur);
+    y = WALK_Y - Math.abs(Math.sin(lt*9)) * 3;
+    legA = Math.sin(lt*9) * 22;
+  } else if(lt < walkDur + 0.8){      // 🤸 elle se prépare
+    const k = (lt - walkDur) / 0.8;
+    x = u.jumpX; y = WALK_Y;
+    sy = 1 - Math.sin(k*Math.PI) * 0.2;
+    sx = 1 + Math.sin(k*Math.PI) * 0.08;
+  } else if(lt < walkDur + 1.6){      // 🏊 elle plonge
+    const k = (lt - walkDur - 0.8) / 0.8;
+    x = u.jumpX + (u.swimX - u.jumpX) * k;
+    y = WALK_Y + (u.swimY - WALK_Y) * k - Math.sin(k*Math.PI) * 75;
+    rot = (k - 0.4) * 70 * dir;
+    legA = 30;
+  } else {      // 🌊 elle nage
+    if(!u.splashed){ u.splashed = true; splash(u.swimX, u.swimY - 26*S); }
+    const st = lt - walkDur - 1.6;
+    swim = true;
+    x = u.swimX + side * Math.sin(st*0.7) * 24;
+    dir = side * Math.cos(st*0.7) >= 0 ? 1 : -1;
+    y = u.swimY + Math.sin(st*2.5 + u.delay) * 1.5;
+    legA = Math.sin(st*8) * 15;
+  }
+
+  u.g.setAttribute('transform', `translate(${x},${y}) rotate(${rot}) scale(${S*sx},${S*sy})`);
+  u.flip.setAttribute('transform', `scale(${dir},1)`);
+  u.legs.forEach((l,i)=>l.setAttribute('transform', `rotate(${i%2 ? legA : -legA},${LEG_X[i]+3.5},-20)`));
+  if(swim !== u.swimming){   // sous l'eau, on ne voit que le haut
+    u.swimming = swim;
+    if(swim) u.clipG.setAttribute('clip-path', `url(#uclip${u.idx})`);
+    else u.clipG.removeAttribute('clip-path');
+  }
+  if(swim) set(u.ripple,{cx:x + 6*dir*S, cy:y - 26*S, rx:36*S + Math.sin(t/300)*2, ry:7*S, opacity:.85});
+  else u.ripple.setAttribute('opacity', 0);
+}
+
+/* ---------- Dessin de Tom ---------- */
+function mix(a,b,t){ return `rgb(${a.map((v,i)=>Math.round(v+(b[i]-v)*t)).join(',')})`; }
+function barColor(v){ return v>60 ? '#22c55e' : v>35 ? '#f59e0b' : '#ef4444'; }
+
+function draw(d){
+  const imc = imcOf(d.poids);
+  const g = clamp((d.poids-62)/63, -0.4, 1);
+  const f = Math.max(0, g);
+  const thin = clamp((62-d.poids)/12, 0, 1);
+
+  const redness = clamp((f-0.35) + (60-d.coeur)/120, 0, 0.8);
+  const baseSkin = [241,194,125].map((v,i)=>v + ([236,216,194][i]-v)*thin*0.7);
+  const skin = mix(baseSkin,[226,128,100],redness);
+  const skinDark = mix([214,160,95],[200,100,80],redness);
+
+  const sw = 50+g*25, bw = 46+g*72, hw = 44+g*36;
+
+  set('torso',{d:`M${150-sw+12},140 Q${150-sw},142 ${150-sw},160 C${150-bw-8},200 ${150-bw},300 ${150-hw},335 L${150+hw},335 C${150+bw},300 ${150+bw+8},200 ${150+sw},160 Q${150+sw},142 ${150+sw-12},140 Z`});
+  set('belly',{cx:150,cy:265+f*8,rx:Math.max(1,bw*0.68),ry:40+f*35,opacity:f});
+  set('navel',{cx:150,cy:272+f*12,r:2+f*1.5,opacity:clamp((f-0.2)*3,0,1)});
+  set('belt',{x:150-hw,y:322,width:2*hw,height:14});
+  set('buckle',{x:144,y:323,width:12,height:12});
+
+  const lx = 150-hw*0.48, rx = 150+hw*0.48, lw = 32+g*24;
+  set('legL',{x1:lx,y1:330,x2:lx-f*6,y2:462,'stroke-width':lw});
+  set('legR',{x1:rx,y1:330,x2:rx+f*6,y2:462,'stroke-width':lw});
+  set('shoeL',{cx:lx-f*6-6,cy:474,rx:24+f*6,ry:11});
+  set('shoeR',{cx:rx+f*6+6,cy:474,rx:24+f*6,ry:11});
+  set('kneeL',{points:`${lx-lw/2-22},392 ${lx-lw/2-12},400 ${lx-lw/2-22},408 ${lx-lw/2-12},416`});
+  set('kneeR',{points:`${rx+lw/2+22},392 ${rx+lw/2+12},400 ${rx+lw/2+22},408 ${rx+lw/2+12},416`});
+  set('knees',{opacity:clamp((imc-34)/3,0,1)});
+
+  const aw = 20+g*14;
+  [['L',-1],['R',1]].forEach(([s,dir])=>{
+    const x1 = 150+dir*(sw-10), y1 = 162, x2 = 150+dir*(Math.max(bw,sw-4)+16), y2 = 305;
+    set('arm'+s,{x1,y1,x2,y2,stroke:skin,'stroke-width':aw});
+    set('sleeve'+s,{x1,y1,x2:x1+(x2-x1)*0.35,y2:y1+(y2-y1)*0.35,'stroke-width':aw+5});
+    set('hand'+s,{cx:x2,cy:y2,r:11+g*3,fill:skin});
+  });
+
+  set('heartAlert',{transform:`translate(${150+sw*0.4},180)`,opacity:clamp((45-d.coeur)/15,0,1)});
+
+  const nw = 13+g*12, hrx = 38+g*16;
+  set('neck',{x:150-nw,y:118,width:2*nw,height:36,fill:skin});
+  set('earL',{cx:150-hrx+2,cy:92,r:8,fill:skinDark});
+  set('earR',{cx:150+hrx-2,cy:92,r:8,fill:skinDark});
+  set('head',{cx:150,cy:88,rx:hrx,ry:42+f*5,fill:skin});
+  set('chin',{cx:150,cy:127+f*4,rx:20+f*16,ry:6+f*7,fill:skin,opacity:clamp((f-0.3)*3,0,1)});
+  set('hair',{d:`M${150-hrx+2},84 C${150-hrx},36 ${150+hrx},36 ${150+hrx-2},84 C${150+hrx-12},60 ${150-hrx+12},60 ${150-hrx+2},84 Z`});
+  set('cheekL',{d:`M${150-hrx*0.72},96 q3,9 9,13`,opacity:thin});
+  set('cheekR',{d:`M${150+hrx*0.72},96 q-3,9 -9,13`,opacity:thin});
+
+  const tilt = (50-d.humeur)/50*3;
+  set('browL',{x1:142,y1:74-tilt,x2:128,y2:75+tilt});
+  set('browR',{x1:158,y1:74-tilt,x2:172,y2:75+tilt});
+  const eyeRy = Math.max(1.5, 4.5-f*1.8);
+  set('eyeL',{cx:135,cy:86,rx:4.5,ry:eyeRy});
+  set('eyeR',{cx:165,cy:86,rx:4.5,ry:eyeRy});
+  const bagOp = clamp((45-d.energie)/25,0,1);
+  set('bagL',{d:'M126,93 Q135,99 144,93',opacity:bagOp});
+  set('bagR',{d:'M156,93 Q165,99 174,93',opacity:bagOp});
+  set('blushL',{cx:150-hrx*0.62,cy:102,rx:7+f*3,ry:4,opacity:redness*0.8});
+  set('blushR',{cx:150+hrx*0.62,cy:102,rx:7+f*3,ry:4,opacity:redness*0.8});
+  set('nose',{d:'M150,90 Q146,100 151,102'});
+
+  const my = 113+f*2, mw = 12+f*5, curve = (d.humeur-50)/50*9;
+  const now = performance.now();
+  const open = now < chompUntil ? Math.abs(Math.sin(now/55))*9 : 0;
+  set('mouth',{
+    d:`M${150-mw},${my} Q150,${my+curve} ${150+mw},${my} Q150,${my+curve+open} ${150-mw},${my}`,
+    fill: open>0.5 ? '#7a2e2e' : 'none'
+  });
+
+  const acnePos = [[-0.55,100],[0.6,97],[-0.3,66],[0.35,68],[0.15,120]];
+  Array.prototype.forEach.call($('acne').children, (c,i)=>set(c,{cx:150+hrx*acnePos[i][0],cy:acnePos[i][1]}));
+  set('acne',{opacity:clamp((48-d.peau)/20,0,1)});
+
+  const sweatPos = [[hrx-6,66],[-hrx+8,72],[hrx*0.5,52]];
+  Array.prototype.forEach.call($('sweat').children, (c,i)=>set(c,{cx:150+sweatPos[i][0],cy:sweatPos[i][1]}));
+  set('sweat',{opacity:clamp((imc-29)/3,0,1)});
+
+  const good = (imc>=18.5 && imc<25) ? clamp((Math.min(d.energie,d.coeur,d.peau)-80)/8,0,1) : 0;
+  set('sparkles',{opacity:good});
+
+  // Tom tremble quand il est à une assiette de l'explosion
+  $('stage').classList.toggle('shake', !over && bad >= MAX_BAD-1);
+
+  $('weight').textContent = d.poids.toFixed(1)+' kg';
+  $('imc').textContent = `IMC : ${imc.toFixed(1)} (taille 1,75 m)`;
+  const ri = imcOf(state.poids);
+  const [label,col] = ri<17 ? ['Maigreur importante','#1d4ed8'] : ri<18.5 ? ['Maigreur','#3b82f6'] :
+        ri<25 ? ['Corpulence normale','#22c55e'] : ri<30 ? ['Surpoids','#f59e0b'] :
+        ri<35 ? ['Obésité modérée','#f97316'] : ri<40 ? ['Obésité sévère','#ef4444'] : ['Obésité massive','#991b1b'];
+  const badge = $('badge');
+  if(over==='boom'){ badge.textContent='💥 Explosé !'; badge.style.background='linear-gradient(90deg,#ef4444,#facc15,#22c55e,#3b82f6,#8b5cf6)'; }
+  else if(over==='melt'){ badge.textContent='😵 Fondu !'; badge.style.background='linear-gradient(90deg,#0ea5e9,#a78bfa,#f472b6)'; }
+  else { badge.textContent=label; badge.style.background=col; }
+
+  [['Energie','energie'],['Coeur','coeur'],['Peau','peau'],['Humeur','humeur']].forEach(([id,k])=>{
+    $('b'+id).style.width = state[k]+'%';
+    $('b'+id).style.background = barColor(state[k]);
+    $('v'+id).textContent = Math.round(state[k])+'%';
+  });
+}
+
+// On ne redessine Tom que lorsqu'il change (économise la batterie et évite les saccades sur téléphone)
+function loop(){
+  let moving = false;
+  for(const k in state){
+    const diff = state[k]-disp[k];
+    if(Math.abs(diff) > 0.01){ disp[k] += diff*0.08; moving = true; }
+    else disp[k] = state[k];
+  }
+  if(moving || dirty || performance.now() < chompUntil + 60){ draw(disp); dirty = false; }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- Recommencer ---------- */
+function reset(){
+  gen++;
+  over = false; busy = false; dirty = true;
+  timers.forEach(clearTimeout); timers = [];
+  parts = []; rainUntil = 0;
+  ctx.clearRect(0, 0, W, H);
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'));
+  document.querySelectorAll('.flyer').forEach(e=>e.remove());
+  if($('man').getAnimations) $('man').getAnimations().forEach(a=>a.cancel());
+  $('man').style.visibility = 'visible';
+  $('man').style.transformOrigin = '';
+  $('pool').classList.remove('show');
+  set('poolWater',{rx:0, ry:0}); set('poolRim',{rx:0, ry:0});
+  $('unicorns').innerHTML = ''; $('splash').innerHTML = ''; $('ripples').innerHTML = '';
+  unis = []; drops = [];
+
+  state = {...START};
+  plate = []; plates = 0; okCount = 0; bad = 0; badHealthy = 0; pbCount = {};
+  $('cPlates').textContent = 0; $('cOk').textContent = 0; $('cBad').textContent = 0;
+  $('history').innerHTML = '';
+  $('log').innerHTML = '';
+  active = new Set(CHANGES.filter(c=>c.test(state)).map(c=>c.id));
+  addLog("ℹ️ Tom, 16 ans, 1,75 m, 72 kg : il est en bonne santé.", 'info');
+  $('fact').style.borderLeftColor = '#999';
+  $('fact').innerHTML = "<b>👋 Voici Tom, 16 ans.</b>Compose son assiette avec les aliments, puis touche « Servir à Tom ». Sauras-tu lui préparer des repas équilibrés ?";
+
+  buildFoods();
+  renderPlate();
+  updateDanger();
+}
+$('reset').onclick = reset;
+document.querySelectorAll('[data-reset]').forEach(b=>b.onclick = () => { reset(); window.scrollTo(0,0); });
+$('serve').onclick = serve;
+$('watchPool').onclick = () => $('meltEnd').classList.remove('show');
+$('clear').onclick = () => { if(busy||over) return; plate = []; renderPlate(); };
+
+reset();
+loop();
+</script>
+<script src="/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js" data-cf-settings="06b1d57ad22fcd6f0f824e52-|49" defer></script></body>
+</html>
